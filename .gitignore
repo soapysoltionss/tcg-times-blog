@@ -38,4 +38,7 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# local docs (never push)
+DOCS.md
 next-env.d.ts

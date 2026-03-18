@@ -24,7 +24,7 @@ export default function PostCard({ post, featured = false }: Props) {
             ? "bg-violet-500"
             : post.category === "flesh-and-blood"
             ? "bg-red-500"
-            : post.category === "magic-the-gathering"
+            : post.category === "one-piece-tcg"
             ? "bg-amber-500"
             : "bg-teal-500"
         }`}

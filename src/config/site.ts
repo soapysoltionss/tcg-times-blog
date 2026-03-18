@@ -2,7 +2,7 @@ export const siteConfig = {
   name: "TCG Times",
   tagline: "Theory, Strategy & Stories from the Card Table",
   description:
-    "In-depth card theories, strategic breakdowns, and community articles covering Grand Archive, Flesh and Blood, Magic: The Gathering, and more.",
+    "In-depth card theories, strategic breakdowns, and community articles covering Grand Archive, Flesh and Blood, One Piece TCG, and more.",
   url: "https://tcgtimes.blog",
   ogImage: "/og-default.jpg",
   author: "TCG Times",
@@ -51,17 +51,17 @@ export const gameCategories: GameCategory[] = [
     emoji: "🩸",
   },
   {
-    slug: "magic-the-gathering",
-    name: "Magic: The Gathering",
-    shortName: "MTG",
+    slug: "one-piece-tcg",
+    name: "One Piece TCG",
+    shortName: "OP",
     description:
-      "Articles, discussions, and takes on the greatest card game of all time — from Limited to Legacy.",
+      "Crew builds, leader analysis, and meta breakdowns for the One Piece Card Game — set sail for victory.",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-50 dark:bg-amber-950",
     borderColor: "border-amber-200 dark:border-amber-800",
     badgeColor:
       "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
-    emoji: "✨",
+    emoji: "🏴‍☠️",
   },
   {
     slug: "general",
