@@ -10,6 +10,38 @@
   --text-muted: #6b6860;
 }
 
+/* System dark mode preference (no JS) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f0f0d;
+    --foreground: #f0ede6;
+    --muted: #1c1c18;
+    --border: #2e2e28;
+    --border-strong: #f0ede6;
+    --text-muted: #8a8778;
+  }
+}
+
+/* Manual dark toggle via next-themes (.dark on <html>) */
+.dark {
+  --background: #0f0f0d;
+  --foreground: #f0ede6;
+  --muted: #1c1c18;
+  --border: #2e2e28;
+  --border-strong: #f0ede6;
+  --text-muted: #8a8778;
+}
+
+/* Manual light override */
+.light {
+  --background: #fafaf8;
+  --foreground: #0a0a0a;
+  --muted: #f0efec;
+  --border: #d6d3cc;
+  --border-strong: #0a0a0a;
+  --text-muted: #6b6860;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -60,22 +92,22 @@ h1, h2, h3, h4, h5, h6 {
 
 /* MDX prose — editorial style */
 .prose {
-  --tw-prose-body: #1a1916;
-  --tw-prose-headings: #0a0a0a;
-  --tw-prose-lead: #3d3c38;
-  --tw-prose-links: #0a0a0a;
-  --tw-prose-bold: #0a0a0a;
-  --tw-prose-counters: #6b6860;
-  --tw-prose-bullets: #6b6860;
-  --tw-prose-hr: #d6d3cc;
-  --tw-prose-quotes: #0a0a0a;
-  --tw-prose-quote-borders: #0a0a0a;
-  --tw-prose-captions: #6b6860;
-  --tw-prose-code: #0a0a0a;
-  --tw-prose-pre-code: #f0efec;
-  --tw-prose-pre-bg: #0a0a0a;
-  --tw-prose-th-borders: #d6d3cc;
-  --tw-prose-td-borders: #d6d3cc;
+  --tw-prose-body: var(--foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-lead: var(--text-muted);
+  --tw-prose-links: var(--foreground);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--text-muted);
+  --tw-prose-bullets: var(--text-muted);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-quote-borders: var(--foreground);
+  --tw-prose-captions: var(--text-muted);
+  --tw-prose-code: var(--foreground);
+  --tw-prose-pre-code: var(--muted);
+  --tw-prose-pre-bg: var(--foreground);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
 }
 
 .prose h1,

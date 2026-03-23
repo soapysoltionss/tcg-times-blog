@@ -11,15 +11,15 @@ export default function AboutPage() {
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-10">
       {/* Page header */}
-      <div className="border-b-2 border-[#0a0a0a] py-14">
-        <span className="label-upper text-[#6b6860] block mb-4">About</span>
+      <div className="border-b-2 border-[var(--border-strong)] py-14">
+        <span className="label-upper text-[var(--text-muted)] block mb-4">About</span>
         <h1
-          className="text-5xl md:text-7xl font-black text-[#0a0a0a] leading-none tracking-tight mb-6"
+          className="text-5xl md:text-7xl font-black text-[var(--foreground)] leading-none tracking-tight mb-6"
           style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
         >
           TCG Times
         </h1>
-        <p className="text-xl text-[#6b6860] max-w-2xl leading-relaxed">
+        <p className="text-xl text-[var(--text-muted)] max-w-2xl leading-relaxed">
           {siteConfig.tagline}
         </p>
       </div>
@@ -39,24 +39,24 @@ export default function AboutPage() {
         </div>
 
         {/* Game cards — editorial list style */}
-        <div className="border-t-2 border-[#0a0a0a] mt-8 mb-8">
+        <div className="border-t-2 border-[var(--border-strong)] mt-8 mb-8">
           {gameCategories.map((cat) => (
             <Link
               key={cat.slug}
               href={`/category/${cat.slug}`}
-              className="group flex items-start gap-6 py-5 border-b border-[#d6d3cc] hover:bg-[#f0efec] transition-colors -mx-2 px-2"
+              className="group flex items-start gap-6 py-5 border-b border-[var(--border)] hover:bg-[var(--muted)] transition-colors -mx-2 px-2"
             >
-              <span className="label-upper text-[#6b6860] pt-1 w-8 shrink-0">{cat.emoji}</span>
+              <span className="label-upper text-[var(--text-muted)] pt-1 w-8 shrink-0">{cat.emoji}</span>
               <div className="flex-1">
                 <p
-                  className="text-xl font-bold text-[#0a0a0a] group-hover:opacity-60 transition-opacity leading-tight mb-1"
+                  className="text-xl font-bold text-[var(--foreground)] group-hover:opacity-60 transition-opacity leading-tight mb-1"
                   style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
                 >
                   {cat.name}
                 </p>
-                <p className="text-sm text-[#6b6860] leading-relaxed">{cat.description}</p>
+                <p className="text-sm text-[var(--text-muted)] leading-relaxed">{cat.description}</p>
               </div>
-              <span className="label-upper text-[#6b6860] pt-1 group-hover:text-[#0a0a0a] transition-colors">→</span>
+              <span className="label-upper text-[var(--text-muted)] pt-1 group-hover:text-[var(--foreground)] transition-colors">→</span>
             </Link>
           ))}
         </div>

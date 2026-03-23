@@ -29,15 +29,15 @@ export default function SubscribePage() {
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-10">
       {/* Header */}
-      <div className="border-b-2 border-[#0a0a0a] py-14 text-center">
-        <span className="label-upper text-[#6b6860] block mb-4">Subscribe</span>
+      <div className="border-b-2 border-[var(--border-strong)] py-14 text-center">
+        <span className="label-upper text-[var(--text-muted)] block mb-4">Subscribe</span>
         <h1
-          className="text-5xl md:text-6xl font-black text-[#0a0a0a] leading-none tracking-tight mb-5"
+          className="text-5xl md:text-6xl font-black text-[var(--foreground)] leading-none tracking-tight mb-5"
           style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
         >
           Unlock Every Article
         </h1>
-        <p className="text-[#6b6860] max-w-md mx-auto leading-relaxed">
+        <p className="text-[var(--text-muted)] max-w-md mx-auto leading-relaxed">
           Subscriber articles go deep — full engine breakdowns, sideboard tables,
           EV data, and matchup guides. Free articles remain free, always.
         </p>
@@ -50,11 +50,11 @@ export default function SubscribePage() {
             key={plan.name}
             className={`border-2 p-10 flex flex-col gap-5 ${
               plan.highlight
-                ? "border-[#0a0a0a] bg-[#0a0a0a] text-[#fafaf8]"
-                : "border-[#d6d3cc] text-[#0a0a0a]"
+                ? "border-[var(--border-strong)] bg-[var(--foreground)] text-[var(--background)]"
+                : "border-[var(--border)] text-[var(--foreground)]"
             }`}
           >
-            <span className={`label-upper ${plan.highlight ? "text-[#fafaf8]/60" : "text-[#6b6860]"}`}>
+            <span className={`label-upper ${plan.highlight ? "opacity-60" : "text-[var(--text-muted)]"}`}>
               {plan.name}
             </span>
             <div className="flex items-baseline gap-1">
@@ -64,18 +64,18 @@ export default function SubscribePage() {
               >
                 {plan.price}
               </span>
-              <span className={`label-upper ${plan.highlight ? "text-[#fafaf8]/60" : "text-[#6b6860]"}`}>
+              <span className={`label-upper ${plan.highlight ? "opacity-60" : "text-[var(--text-muted)]"}`}>
                 {plan.period}
               </span>
             </div>
-            <p className={`text-sm leading-relaxed ${plan.highlight ? "text-[#fafaf8]/80" : "text-[#6b6860]"}`}>
+            <p className={`text-sm leading-relaxed ${plan.highlight ? "opacity-80" : "text-[var(--text-muted)]"}`}>
               {plan.description}
             </p>
             <button
               className={`label-upper px-6 py-4 mt-auto transition-opacity hover:opacity-70 ${
                 plan.highlight
-                  ? "bg-[#fafaf8] text-[#0a0a0a]"
-                  : "bg-[#0a0a0a] text-[#fafaf8]"
+                  ? "bg-[var(--background)] text-[var(--foreground)]"
+                  : "bg-[var(--foreground)] text-[var(--background)]"
               }`}
             >
               {plan.cta}
@@ -85,8 +85,8 @@ export default function SubscribePage() {
       </div>
 
       {/* What's included */}
-      <div className="border-t border-[#d6d3cc] py-16 max-w-2xl mx-auto">
-        <p className="label-upper text-[#6b6860] mb-8">What subscribers get</p>
+      <div className="border-t border-[var(--border)] py-16 max-w-2xl mx-auto">
+        <p className="label-upper text-[var(--text-muted)] mb-8">What subscribers get</p>
         <ul className="space-y-4">
           {[
             "Full access to all paywalled articles, past and future",
@@ -96,18 +96,18 @@ export default function SubscribePage() {
             "Early access to new content before public release",
           ].map((item) => (
             <li key={item} className="flex items-start gap-4">
-              <span className="font-black text-[#0a0a0a] shrink-0 mt-0.5">—</span>
-              <span className="text-sm text-[#0a0a0a] leading-relaxed">{item}</span>
+              <span className="font-black text-[var(--foreground)] shrink-0 mt-0.5">—</span>
+              <span className="text-sm text-[var(--foreground)] leading-relaxed">{item}</span>
             </li>
           ))}
         </ul>
       </div>
 
       {/* Already subscribed */}
-      <div className="border-t border-[#d6d3cc] py-10 text-center">
-        <p className="label-upper text-[#6b6860]">
+      <div className="border-t border-[var(--border)] py-10 text-center">
+        <p className="label-upper text-[var(--text-muted)]">
           Already a subscriber?{" "}
-          <Link href="/login" className="text-[#0a0a0a] underline underline-offset-2 hover:opacity-60 transition-opacity">
+          <Link href="/login" className="text-[var(--foreground)] underline underline-offset-2 hover:opacity-60 transition-opacity">
             Sign in to your account
           </Link>
         </p>

@@ -13,31 +13,31 @@ export default function HomePage() {
     <div>
       {/* Hero — full-width editorial banner */}
       {heroPost && (
-        <section className="border-b border-[#0a0a0a]">
+        <section className="border-b border-[var(--border-strong)]">
           <div className="max-w-7xl mx-auto px-6 lg:px-10 py-16 md:py-24 grid md:grid-cols-2 gap-12 items-end">
             <div>
-              <span className="label-upper text-[#6b6860] block mb-4">
+              <span className="label-upper text-[var(--text-muted)] block mb-4">
                 {gameCategories.find(c => c.slug === heroPost.category)?.name ?? "Featured"}
               </span>
               <h2
-                className="text-4xl md:text-6xl font-black text-[#0a0a0a] leading-none tracking-tight mb-6"
+                className="text-4xl md:text-6xl font-black text-[var(--foreground)] leading-none tracking-tight mb-6"
                 style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
               >
                 {heroPost.title}
               </h2>
               <Link
                 href={`/blog/${heroPost.slug}`}
-                className="inline-flex items-center gap-2 bg-[#0a0a0a] text-[#fafaf8] label-upper px-6 py-3 hover:opacity-70 transition-opacity"
+                className="inline-flex items-center gap-2 bg-[var(--foreground)] text-[var(--background)] label-upper px-6 py-3 hover:opacity-70 transition-opacity"
               >
                 Read Article →
               </Link>
             </div>
             <div>
-              <p className="text-lg text-[#6b6860] leading-relaxed mb-6">{heroPost.excerpt}</p>
+              <p className="text-lg text-[var(--text-muted)] leading-relaxed mb-6">{heroPost.excerpt}</p>
               <div className="flex items-center gap-3">
-                <span className="label-upper text-[#6b6860]">{heroPost.author}</span>
-                <span className="text-[#d6d3cc]">·</span>
-                <span className="label-upper text-[#6b6860]">{heroPost.readingTime}</span>
+                <span className="label-upper text-[var(--text-muted)]">{heroPost.author}</span>
+                <span className="text-[var(--border)]">·</span>
+                <span className="label-upper text-[var(--text-muted)]">{heroPost.readingTime}</span>
               </div>
             </div>
           </div>
@@ -45,20 +45,20 @@ export default function HomePage() {
       )}
 
       {/* Game categories strip */}
-      <section className="border-b border-[#d6d3cc] bg-[#f0efec]">
+      <section className="border-b border-[var(--border)] bg-[var(--muted)]">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 flex overflow-x-auto">
           {gameCategories.map((cat) => (
             <Link
               key={cat.slug}
               href={`/category/${cat.slug}`}
-              className="label-upper flex-none px-6 py-4 text-[#0a0a0a] border-r border-[#d6d3cc] hover:bg-[#0a0a0a] hover:text-[#fafaf8] transition-colors whitespace-nowrap"
+              className="label-upper flex-none px-6 py-4 text-[var(--foreground)] border-r border-[var(--border)] hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors whitespace-nowrap"
             >
               {cat.shortName}
             </Link>
           ))}
           <Link
             href="/blog"
-            className="label-upper flex-none px-6 py-4 text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-[#fafaf8] transition-colors ml-auto whitespace-nowrap"
+            className="label-upper flex-none px-6 py-4 text-[var(--foreground)] hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors ml-auto whitespace-nowrap"
           >
             All Posts →
           </Link>
@@ -67,16 +67,16 @@ export default function HomePage() {
 
       {/* Featured 3-column grid */}
       {gridPosts.length > 0 && (
-        <section className="border-b border-[#d6d3cc]">
+        <section className="border-b border-[var(--border)]">
           <div className="max-w-7xl mx-auto px-6 lg:px-10 py-14">
             <div className="flex items-baseline justify-between mb-8">
               <h2
-                className="text-3xl font-black text-[#0a0a0a]"
+                className="text-3xl font-black text-[var(--foreground)]"
                 style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
               >
                 Latest
               </h2>
-              <Link href="/blog" className="label-upper text-[#6b6860] hover:text-[#0a0a0a] transition-colors">
+              <Link href="/blog" className="label-upper text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors">
                 All Posts →
               </Link>
             </div>
@@ -94,13 +94,13 @@ export default function HomePage() {
         <section className="max-w-7xl mx-auto px-6 lg:px-10 py-14">
           <div className="flex items-baseline justify-between mb-2">
             <h2
-              className="text-2xl font-black text-[#0a0a0a]"
+              className="text-2xl font-black text-[var(--foreground)]"
               style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
             >
               More Articles
             </h2>
           </div>
-          <div className="border-t-2 border-[#0a0a0a]">
+          <div className="border-t-2 border-[var(--border-strong)]">
             {latest.slice(3).map((post, i) => (
               <PostCard key={post.slug} post={post} index={i + 3} variant="row" />
             ))}
@@ -112,12 +112,12 @@ export default function HomePage() {
       {latest.length === 0 && (
         <section className="max-w-7xl mx-auto px-6 lg:px-10 py-24 text-center">
           <h2
-            className="text-3xl font-black text-[#0a0a0a] mb-4"
+            className="text-3xl font-black text-[var(--foreground)] mb-4"
             style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
           >
             Coming Soon
           </h2>
-          <p className="text-[#6b6860]">
+          <p className="text-[var(--text-muted)]">
             The blog is freshly launched. Check back soon for card theories and articles.
           </p>
         </section>

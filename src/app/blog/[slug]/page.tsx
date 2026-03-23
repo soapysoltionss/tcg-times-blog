@@ -43,14 +43,14 @@ export default async function PostPage({ params }: Props) {
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-10">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 py-5 border-b border-[#d6d3cc] mb-10">
-        <Link href="/" className="label-upper text-[#6b6860] hover:text-[#0a0a0a] transition-colors">Home</Link>
-        <span className="text-[#d6d3cc]">·</span>
-        <Link href="/blog" className="label-upper text-[#6b6860] hover:text-[#0a0a0a] transition-colors">All Posts</Link>
+      <nav className="flex items-center gap-2 py-5 border-b border-[var(--border)] mb-10">
+        <Link href="/" className="label-upper text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors">Home</Link>
+        <span className="text-[var(--border)]">·</span>
+        <Link href="/blog" className="label-upper text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors">All Posts</Link>
         {cat && (
           <>
-            <span className="text-[#d6d3cc]">·</span>
-            <Link href={`/category/${cat.slug}`} className="label-upper text-[#6b6860] hover:text-[#0a0a0a] transition-colors">
+            <span className="text-[var(--border)]">·</span>
+            <Link href={`/category/${cat.slug}`} className="label-upper text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors">
               {cat.name}
             </Link>
           </>
@@ -61,25 +61,25 @@ export default async function PostPage({ params }: Props) {
         {/* Header */}
         <header className="mb-10">
           {cat && (
-            <span className="label-upper text-[#6b6860] block mb-4">{cat.name}</span>
+            <span className="label-upper text-[var(--text-muted)] block mb-4">{cat.name}</span>
           )}
           <h1
-            className="text-4xl md:text-5xl font-black text-[#0a0a0a] leading-tight tracking-tight mb-6"
+            className="text-4xl md:text-5xl font-black text-[var(--foreground)] leading-tight tracking-tight mb-6"
             style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
           >
             {post.title}
           </h1>
-          <p className="text-lg text-[#6b6860] leading-relaxed mb-8">
+          <p className="text-lg text-[var(--text-muted)] leading-relaxed mb-8">
             {post.excerpt}
           </p>
-          <div className="flex flex-wrap items-center gap-3 pb-8 border-b-2 border-[#0a0a0a]">
-            <span className="label-upper text-[#0a0a0a] font-bold">{post.author}</span>
-            <span className="text-[#d6d3cc]">·</span>
-            <span className="label-upper text-[#6b6860]">
+          <div className="flex flex-wrap items-center gap-3 pb-8 border-b-2 border-[var(--border-strong)]">
+            <span className="label-upper text-[var(--foreground)] font-bold">{post.author}</span>
+            <span className="text-[var(--border)]">·</span>
+            <span className="label-upper text-[var(--text-muted)]">
               <time dateTime={post.date}>{formatDate(post.date)}</time>
             </span>
-            <span className="text-[#d6d3cc]">·</span>
-            <span className="label-upper text-[#6b6860]">{post.readingTime}</span>
+            <span className="text-[var(--border)]">·</span>
+            <span className="label-upper text-[var(--text-muted)]">{post.readingTime}</span>
           </div>
         </header>
 
@@ -95,11 +95,11 @@ export default async function PostPage({ params }: Props) {
 
         {/* Tags */}
         {post.tags && post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-10 pt-6 border-t border-[#d6d3cc]">
+          <div className="flex flex-wrap gap-2 mt-10 pt-6 border-t border-[var(--border)]">
             {post.tags.map((tag) => (
               <span
                 key={tag}
-                className="label-upper bg-[#f0efec] text-[#6b6860] px-3 py-1.5"
+                className="label-upper bg-[var(--muted)] text-[var(--text-muted)] px-3 py-1.5"
               >
                 {tag}
               </span>
@@ -108,10 +108,10 @@ export default async function PostPage({ params }: Props) {
         )}
 
         {/* Back link */}
-        <div className="mt-12 pt-6 border-t-2 border-[#0a0a0a]">
+        <div className="mt-12 pt-6 border-t-2 border-[var(--border-strong)]">
           <Link
             href="/blog"
-            className="label-upper text-[#0a0a0a] hover:opacity-60 transition-opacity"
+            className="label-upper text-[var(--foreground)] hover:opacity-60 transition-opacity"
           >
             ← Back to all posts
           </Link>

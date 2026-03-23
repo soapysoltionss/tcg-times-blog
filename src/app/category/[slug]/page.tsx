@@ -33,37 +33,37 @@ export default async function CategoryPage({ params }: Props) {
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-10">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 py-5 border-b border-[#d6d3cc] mb-10">
-        <Link href="/" className="label-upper text-[#6b6860] hover:text-[#0a0a0a] transition-colors">Home</Link>
-        <span className="text-[#d6d3cc]">·</span>
-        <Link href="/blog" className="label-upper text-[#6b6860] hover:text-[#0a0a0a] transition-colors">All Posts</Link>
-        <span className="text-[#d6d3cc]">·</span>
-        <span className="label-upper text-[#0a0a0a]">{cat.name}</span>
+      <nav className="flex items-center gap-2 py-5 border-b border-[var(--border)] mb-10">
+        <Link href="/" className="label-upper text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors">Home</Link>
+        <span className="text-[var(--border)]">·</span>
+        <Link href="/blog" className="label-upper text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors">All Posts</Link>
+        <span className="text-[var(--border)]">·</span>
+        <span className="label-upper text-[var(--foreground)]">{cat.name}</span>
       </nav>
 
       {/* Category header */}
-      <div className="border-b-2 border-[#0a0a0a] pb-8 mb-2">
-        <span className="label-upper text-[#6b6860] block mb-3">{posts.length} article{posts.length !== 1 ? "s" : ""}</span>
+      <div className="border-b-2 border-[var(--border-strong)] pb-8 mb-2">
+        <span className="label-upper text-[var(--text-muted)] block mb-3">{posts.length} article{posts.length !== 1 ? "s" : ""}</span>
         <h1
-          className="text-5xl md:text-6xl font-black text-[#0a0a0a] leading-none tracking-tight mb-4"
+          className="text-5xl md:text-6xl font-black text-[var(--foreground)] leading-none tracking-tight mb-4"
           style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
         >
           {cat.name}
         </h1>
-        <p className="text-[#6b6860] max-w-xl leading-relaxed">{cat.description}</p>
+        <p className="text-[var(--text-muted)] max-w-xl leading-relaxed">{cat.description}</p>
       </div>
 
       {/* Posts */}
       {posts.length === 0 ? (
         <div className="py-24 text-center">
           <h2
-            className="text-2xl font-black text-[#0a0a0a] mb-3"
+            className="text-2xl font-black text-[var(--foreground)] mb-3"
             style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
           >
             No posts yet for {cat.name}
           </h2>
-          <p className="text-[#6b6860] mb-8">Articles are on their way — check back soon.</p>
-          <Link href="/blog" className="label-upper text-[#0a0a0a] hover:opacity-60 transition-opacity">
+          <p className="text-[var(--text-muted)] mb-8">Articles are on their way — check back soon.</p>
+          <Link href="/blog" className="label-upper text-[var(--foreground)] hover:opacity-60 transition-opacity">
             ← Browse all posts
           </Link>
         </div>
@@ -75,7 +75,7 @@ export default async function CategoryPage({ params }: Props) {
             ))}
           </div>
           {posts.slice(3).length > 0 && (
-            <div className="border-t-2 border-[#0a0a0a] mt-8">
+            <div className="border-t-2 border-[var(--border-strong)] mt-8">
               {posts.slice(3).map((post, i) => (
                 <PostCard key={post.slug} post={post} index={i + 3} variant="row" />
               ))}
