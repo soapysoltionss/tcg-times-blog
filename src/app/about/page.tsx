@@ -25,8 +25,8 @@ export default function AboutPage() {
         <h2>What is TCG Times?</h2>
         <p>
           TCG Times is a blog dedicated to trading card game theory, strategy, and community discussion.
-          Whether you&apos;re deep in the Grand Archive meta, grinding Flesh and Blood regionals, cracking
-          packs of the latest Magic: The Gathering set, or just curious about where the card game
+          Whether you&apos;re preparing for the next Grand Archive Ascent, grinding Flesh and Blood Callings or Casuals, cracking
+          packs of the latest sets, or just curious about where the card game
           hobby is heading — this is your home.
         </p>
 

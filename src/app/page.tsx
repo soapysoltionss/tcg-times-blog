@@ -27,7 +27,7 @@ export default function HomePage() {
           </h1>
           <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed mb-10">
             In-depth card theories, strategic breakdowns, and community discussion
-            covering Grand Archive, Flesh and Blood, Magic: The Gathering, and beyond.
+            covering Grand Archive, Flesh and Blood, One Piece TCG, and beyond.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link

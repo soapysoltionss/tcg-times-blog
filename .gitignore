@@ -41,4 +41,5 @@ yarn-error.log*
 
 # local docs (never push)
 DOCS.md
+MARKDOWN.md
 next-env.d.ts
