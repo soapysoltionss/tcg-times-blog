@@ -58,27 +58,27 @@ export default function ChatWidget() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="Open TCG assistant"
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-violet-600 hover:bg-violet-500 text-white shadow-xl flex items-center justify-center text-2xl transition-all hover:scale-110 active:scale-95"
+        className="fixed bottom-6 right-6 z-50 w-12 h-12 bg-[#0a0a0a] hover:opacity-70 text-[#fafaf8] shadow-xl flex items-center justify-center text-lg transition-all active:scale-95"
       >
         {open ? "✕" : "🃏"}
       </button>
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 flex flex-col rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden bg-white dark:bg-gray-900">
+        <div className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 flex flex-col border-2 border-[#0a0a0a] shadow-2xl overflow-hidden bg-[#fafaf8]">
           {/* Header */}
-          <div className="bg-violet-600 px-4 py-3 flex items-center gap-2">
-            <span className="text-xl">🃏</span>
+          <div className="bg-[#0a0a0a] px-4 py-3 flex items-center gap-3">
+            <span className="text-lg">🃏</span>
             <div>
-              <p className="text-white font-bold text-sm leading-none">TCG Assistant</p>
-              <p className="text-violet-200 text-xs mt-0.5">Grand Archive · FaB · One Piece TCG</p>
+              <p className="text-[#fafaf8] font-bold text-sm leading-none tracking-wide">TCG ASSISTANT</p>
+              <p className="text-[#6b6860] text-xs mt-0.5 tracking-wider uppercase">Grand Archive · FaB · One Piece TCG</p>
             </div>
           </div>
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-80 min-h-[12rem]">
             {messages.length === 0 && (
-              <div className="text-center text-sm text-gray-400 dark:text-gray-500 py-6">
+              <div className="text-center text-sm text-[#6b6860] py-6">
                 <p className="text-2xl mb-2">👋</p>
                 <p>Ask me anything about Grand Archive, Flesh and Blood, One Piece TCG, or general TCG strategy!</p>
               </div>
@@ -89,10 +89,10 @@ export default function ChatWidget() {
                 className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                  className={`max-w-[85%] px-3 py-2 text-sm leading-relaxed ${
                     msg.role === "user"
-                      ? "bg-violet-600 text-white rounded-br-sm"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-bl-sm"
+                      ? "bg-[#0a0a0a] text-[#fafaf8]"
+                      : "bg-[#f0efec] text-[#0a0a0a] border border-[#d6d3cc]"
                   }`}
                 >
                   {msg.content}
@@ -101,11 +101,11 @@ export default function ChatWidget() {
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-sm px-3 py-2">
+                <div className="bg-[#f0efec] border border-[#d6d3cc] px-3 py-2">
                   <span className="flex gap-1 items-center h-5">
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                    <span className="w-1.5 h-1.5 bg-[#6b6860] rounded-full animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1.5 h-1.5 bg-[#6b6860] rounded-full animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1.5 h-1.5 bg-[#6b6860] rounded-full animate-bounce [animation-delay:300ms]" />
                   </span>
                 </div>
               </div>
@@ -116,19 +116,19 @@ export default function ChatWidget() {
           {/* Input */}
           <form
             onSubmit={sendMessage}
-            className="border-t border-gray-200 dark:border-gray-700 p-3 flex gap-2"
+            className="border-t border-[#d6d3cc] p-3 flex gap-2"
           >
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask a TCG question…"
               disabled={loading}
-              className="flex-1 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50 text-gray-900 dark:text-gray-100"
+              className="flex-1 text-sm border border-[#d6d3cc] bg-[#fafaf8] px-3 py-2 focus:outline-none focus:border-[#0a0a0a] disabled:opacity-50 text-[#0a0a0a]"
             />
             <button
               type="submit"
               disabled={!input.trim() || loading}
-              className="px-3 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-xl text-sm font-medium transition-colors"
+              className="px-3 py-2 bg-[#0a0a0a] hover:opacity-70 disabled:opacity-30 text-[#fafaf8] text-sm font-bold tracking-wider uppercase transition-opacity"
             >
               Send
             </button>

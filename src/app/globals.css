@@ -2,59 +2,125 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafaf8;
+  --foreground: #0a0a0a;
+  --muted: #f0efec;
+  --border: #d6d3cc;
+  --border-strong: #0a0a0a;
+  --text-muted: #6b6860;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0c0f;
-    --foreground: #f0f0f0;
-  }
-}
-
+/* Base */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans, sans-serif);
+  font-family: var(--font-sans, "DM Sans", sans-serif);
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
-/* MDX prose overrides */
-.prose h1, .prose h2, .prose h3, .prose h4 {
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif, "Playfair Display", serif);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+/* Editorial utility classes */
+.font-serif {
+  font-family: var(--font-serif, "Playfair Display", serif);
+}
+
+.font-sans {
+  font-family: var(--font-sans, "DM Sans", sans-serif);
+}
+
+.label-upper {
+  font-family: var(--font-sans, sans-serif);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* Ruled divider */
+.rule {
+  border-top: 1px solid var(--border);
+}
+
+.rule-strong {
+  border-top: 2px solid var(--foreground);
+}
+
+/* MDX prose — editorial style */
+.prose {
+  --tw-prose-body: #1a1916;
+  --tw-prose-headings: #0a0a0a;
+  --tw-prose-lead: #3d3c38;
+  --tw-prose-links: #0a0a0a;
+  --tw-prose-bold: #0a0a0a;
+  --tw-prose-counters: #6b6860;
+  --tw-prose-bullets: #6b6860;
+  --tw-prose-hr: #d6d3cc;
+  --tw-prose-quotes: #0a0a0a;
+  --tw-prose-quote-borders: #0a0a0a;
+  --tw-prose-captions: #6b6860;
+  --tw-prose-code: #0a0a0a;
+  --tw-prose-pre-code: #f0efec;
+  --tw-prose-pre-bg: #0a0a0a;
+  --tw-prose-th-borders: #d6d3cc;
+  --tw-prose-td-borders: #d6d3cc;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  font-family: var(--font-serif, "Playfair Display", serif);
   font-weight: 700;
 }
 
 .prose a {
-  color: #7c3aed;
+  color: var(--foreground);
   text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.prose a:hover {
+  opacity: 0.6;
 }
 
 .prose blockquote {
-  border-left: 4px solid #7c3aed;
+  border-left: 3px solid var(--foreground);
   font-style: italic;
-  background: #f5f3ff;
-  padding: 0.75rem 1rem;
-  border-radius: 0 0.5rem 0.5rem 0;
-}
-
-@media (prefers-color-scheme: dark) {
-  .prose a {
-    color: #a78bfa;
-  }
-  .prose blockquote {
-    background: #1e1b2e;
-  }
-}
-
-body {
-  background: var(--background);
+  font-family: var(--font-serif, serif);
+  font-size: 1.15em;
+  background: transparent;
+  padding: 0.5rem 1.25rem;
+  margin-left: 0;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+.prose code {
+  background: var(--muted);
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  font-size: 0.875em;
+}
+
+.prose pre {
+  background: var(--foreground) !important;
+  color: var(--muted);
+  border-radius: 0;
+  border: none;
+}
+
+.prose hr {
+  border-color: var(--border);
 }

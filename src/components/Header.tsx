@@ -4,70 +4,79 @@ import { siteConfig } from "@/config/site";
 
 export default function Header() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-800 bg-white/90 dark:bg-gray-950/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-gray-950/70">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <span className="text-2xl">🃏</span>
-            <div className="leading-none">
-              <span className="font-extrabold text-lg text-gray-900 dark:text-white tracking-tight group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
-                {siteConfig.name}
-              </span>
-              <span className="hidden sm:block text-[10px] text-gray-500 dark:text-gray-400 tracking-wide uppercase">
-                tcgtimes.blog
-              </span>
-            </div>
-          </Link>
+    <header className="w-full bg-[#fafaf8] border-b border-[#0a0a0a]">
+      {/* Top utility bar */}
+      <div className="border-b border-[#d6d3cc]">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 h-9 flex items-center justify-between">
+          <span className="label-upper text-[#6b6860]">
+            Trading Card Game Theory &amp; Strategy
+          </span>
+          <span className="label-upper text-[#6b6860]">
+            tcgtimes.blog
+          </span>
+        </div>
+      </div>
 
-          {/* Nav */}
-          <nav className="hidden md:flex items-center gap-1">
+      {/* Masthead */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-6 text-center">
+        <Link href="/" className="inline-block group">
+          <h1
+            className="font-serif text-5xl md:text-7xl font-black tracking-tighter text-[#0a0a0a] leading-none group-hover:opacity-70 transition-opacity"
+            style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
+          >
+            TCG TIMES
+          </h1>
+        </Link>
+      </div>
+
+      {/* Nav strip */}
+      <div className="border-t border-[#0a0a0a]">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center justify-center gap-0 divide-x divide-[#d6d3cc]">
             {gameCategories.map((cat) => (
               <Link
                 key={cat.slug}
                 href={`/category/${cat.slug}`}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                className="label-upper px-5 py-3 text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-[#fafaf8] transition-colors"
               >
-                <span>{cat.emoji}</span>
-                <span>{cat.shortName}</span>
+                {cat.shortName}
               </Link>
             ))}
             <Link
               href="/blog"
-              className="ml-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+              className="label-upper px-5 py-3 text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-[#fafaf8] transition-colors"
             >
               All Posts
             </Link>
             <Link
               href="/about"
-              className="ml-1 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+              className="label-upper px-5 py-3 text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-[#fafaf8] transition-colors"
             >
               About
             </Link>
           </nav>
 
-          {/* Mobile menu placeholder */}
-          <details className="md:hidden relative">
-            <summary className="list-none cursor-pointer p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-              <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Mobile nav */}
+          <details className="md:hidden">
+            <summary className="label-upper py-3 cursor-pointer list-none flex items-center justify-between text-[#0a0a0a]">
+              <span>Menu</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </summary>
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-2">
+            <div className="border-t border-[#d6d3cc] pb-3">
               {gameCategories.map((cat) => (
                 <Link
                   key={cat.slug}
                   href={`/category/${cat.slug}`}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  className="label-upper block py-2.5 text-[#0a0a0a] border-b border-[#f0efec] hover:bg-[#f0efec] px-1 transition-colors"
                 >
-                  <span>{cat.emoji}</span>
-                  <span>{cat.name}</span>
+                  {cat.shortName}
                 </Link>
               ))}
-              <div className="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
-                <Link href="/blog" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">All Posts</Link>
-                <Link href="/about" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">About</Link>
-              </div>
+              <Link href="/blog" className="label-upper block py-2.5 text-[#0a0a0a] border-b border-[#f0efec] hover:bg-[#f0efec] px-1 transition-colors">All Posts</Link>
+              <Link href="/about" className="label-upper block py-2.5 text-[#0a0a0a] hover:bg-[#f0efec] px-1 transition-colors">About</Link>
             </div>
           </details>
         </div>

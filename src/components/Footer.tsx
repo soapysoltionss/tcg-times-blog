@@ -3,61 +3,64 @@ import { siteConfig, gameCategories } from "@/config/site";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 mt-24">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          {/* Brand */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-2xl">🃏</span>
-              <span className="font-extrabold text-gray-900 dark:text-white text-lg">{siteConfig.name}</span>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-              {siteConfig.tagline}
-            </p>
-            <p className="text-xs text-gray-400 dark:text-gray-600 mt-4">
-              © {new Date().getFullYear()} {siteConfig.name} · tcgtimes.blog
-            </p>
-          </div>
+    <footer className="mt-24 bg-[#fafaf8] border-t-2 border-[#0a0a0a]">
+      {/* Wordmark row */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-12 text-center border-b border-[#d6d3cc]">
+        <p
+          className="text-6xl md:text-8xl font-black tracking-tighter text-[#0a0a0a] leading-none"
+          style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
+        >
+          TCG TIMES
+        </p>
+        <p className="label-upper text-[#6b6860] mt-3">{siteConfig.tagline}</p>
+      </div>
 
-          {/* Games */}
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm uppercase tracking-wider">Games</h3>
-            <ul className="space-y-2">
-              {gameCategories.map((cat) => (
-                <li key={cat.slug}>
-                  <Link
-                    href={`/category/${cat.slug}`}
-                    className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
-                  >
-                    <span>{cat.emoji}</span>
-                    <span>{cat.name}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Links */}
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm uppercase tracking-wider">Site</h3>
-            <ul className="space-y-2">
-              {[
-                { href: "/blog", label: "All Posts" },
-                { href: "/about", label: "About" },
-              ].map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+      {/* Links grid */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-10 grid grid-cols-2 md:grid-cols-4 gap-8 border-b border-[#d6d3cc]">
+        {/* Games */}
+        <div>
+          <p className="label-upper text-[#0a0a0a] mb-4">Games</p>
+          <ul className="space-y-2.5">
+            {gameCategories.map((cat) => (
+              <li key={cat.slug}>
+                <Link
+                  href={`/category/${cat.slug}`}
+                  className="text-sm text-[#6b6860] hover:text-[#0a0a0a] transition-colors"
+                >
+                  {cat.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
+
+        {/* Site */}
+        <div>
+          <p className="label-upper text-[#0a0a0a] mb-4">Site</p>
+          <ul className="space-y-2.5">
+            {[
+              { href: "/blog", label: "All Posts" },
+              { href: "/about", label: "About" },
+            ].map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="text-sm text-[#6b6860] hover:text-[#0a0a0a] transition-colors"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* Copyright */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-5 flex items-center justify-between">
+        <span className="label-upper text-[#6b6860]">
+          © {new Date().getFullYear()} TCG Times
+        </span>
+        <span className="label-upper text-[#6b6860]">tcgtimes.blog</span>
       </div>
     </footer>
   );

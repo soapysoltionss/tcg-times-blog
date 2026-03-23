@@ -31,42 +31,57 @@ export default async function CategoryPage({ params }: Props) {
   const posts = getPostsByCategory(slug);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="max-w-7xl mx-auto px-6 lg:px-10">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-8">
-        <Link href="/" className="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Home</Link>
-        <span>·</span>
-        <Link href="/blog" className="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Blog</Link>
-        <span>·</span>
-        <span className={cat.color}>{cat.name}</span>
+      <nav className="flex items-center gap-2 py-5 border-b border-[#d6d3cc] mb-10">
+        <Link href="/" className="label-upper text-[#6b6860] hover:text-[#0a0a0a] transition-colors">Home</Link>
+        <span className="text-[#d6d3cc]">·</span>
+        <Link href="/blog" className="label-upper text-[#6b6860] hover:text-[#0a0a0a] transition-colors">All Posts</Link>
+        <span className="text-[#d6d3cc]">·</span>
+        <span className="label-upper text-[#0a0a0a]">{cat.name}</span>
       </nav>
 
-      {/* Header */}
-      <div className={`rounded-2xl border p-8 mb-10 ${cat.bgColor} ${cat.borderColor}`}>
-        <div className="text-4xl mb-3">{cat.emoji}</div>
-        <h1 className={`text-3xl font-extrabold mb-3 ${cat.color}`}>{cat.name}</h1>
-        <p className="text-gray-600 dark:text-gray-400 max-w-xl leading-relaxed">{cat.description}</p>
-        <p className="text-sm text-gray-500 dark:text-gray-500 mt-3">{posts.length} post{posts.length !== 1 ? "s" : ""}</p>
+      {/* Category header */}
+      <div className="border-b-2 border-[#0a0a0a] pb-8 mb-2">
+        <span className="label-upper text-[#6b6860] block mb-3">{posts.length} article{posts.length !== 1 ? "s" : ""}</span>
+        <h1
+          className="text-5xl md:text-6xl font-black text-[#0a0a0a] leading-none tracking-tight mb-4"
+          style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
+        >
+          {cat.name}
+        </h1>
+        <p className="text-[#6b6860] max-w-xl leading-relaxed">{cat.description}</p>
       </div>
 
       {/* Posts */}
       {posts.length === 0 ? (
-        <div className="text-center py-24">
-          <div className="text-5xl mb-4">{cat.emoji}</div>
-          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">No posts yet for {cat.name}</h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
-            Check back soon — articles are on their way!
-          </p>
-          <Link href="/blog" className="text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline">
+        <div className="py-24 text-center">
+          <h2
+            className="text-2xl font-black text-[#0a0a0a] mb-3"
+            style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
+          >
+            No posts yet for {cat.name}
+          </h2>
+          <p className="text-[#6b6860] mb-8">Articles are on their way — check back soon.</p>
+          <Link href="/blog" className="label-upper text-[#0a0a0a] hover:opacity-60 transition-opacity">
             ← Browse all posts
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts.map((post) => (
-            <PostCard key={post.slug} post={post} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-2">
+            {posts.slice(0, 3).map((post, i) => (
+              <PostCard key={post.slug} post={post} index={i} />
+            ))}
+          </div>
+          {posts.slice(3).length > 0 && (
+            <div className="border-t-2 border-[#0a0a0a] mt-8">
+              {posts.slice(3).map((post, i) => (
+                <PostCard key={post.slug} post={post} index={i + 3} variant="row" />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

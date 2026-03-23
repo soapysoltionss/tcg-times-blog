@@ -13,43 +13,64 @@ export default function BlogPage() {
   const posts = getAllPosts();
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="max-w-7xl mx-auto px-6 lg:px-10 py-14">
       {/* Page header */}
-      <div className="mb-10">
-        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white mb-3">
+      <div className="border-b-2 border-[#0a0a0a] pb-6 mb-2">
+        <h1
+          className="text-5xl md:text-6xl font-black text-[#0a0a0a] leading-none tracking-tight mb-3"
+          style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
+        >
           All Posts
         </h1>
-        <p className="text-gray-500 dark:text-gray-400 text-lg">
-          {posts.length} article{posts.length !== 1 ? "s" : ""} covering the best card games in the world.
+        <p className="label-upper text-[#6b6860]">
+          {posts.length} article{posts.length !== 1 ? "s" : ""} — card theories, strategy & more
         </p>
+      </div>
 
-        {/* Category filter strip */}
-        <div className="flex flex-wrap gap-2 mt-6">
-          <span className="px-3 py-1.5 rounded-full text-sm font-medium bg-violet-600 text-white">All</span>
-          {gameCategories.map((cat) => (
-            <Link
-              key={cat.slug}
-              href={`/category/${cat.slug}`}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${cat.badgeColor} hover:opacity-80`}
-            >
-              {cat.emoji} {cat.name}
-            </Link>
-          ))}
-        </div>
+      {/* Category filter strip */}
+      <div className="flex flex-wrap gap-0 border-b border-[#d6d3cc] mb-10">
+        <span className="label-upper px-4 py-3 bg-[#0a0a0a] text-[#fafaf8]">All</span>
+        {gameCategories.map((cat) => (
+          <Link
+            key={cat.slug}
+            href={`/category/${cat.slug}`}
+            className="label-upper px-4 py-3 text-[#6b6860] border-l border-[#d6d3cc] hover:bg-[#f0efec] hover:text-[#0a0a0a] transition-colors"
+          >
+            {cat.shortName}
+          </Link>
+        ))}
       </div>
 
       {posts.length === 0 ? (
-        <div className="text-center py-24">
-          <div className="text-5xl mb-4">✍️</div>
-          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">No posts yet</h2>
-          <p className="text-gray-500 dark:text-gray-400">Drop some MDX files in <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">content/posts/</code> to get started.</p>
+        <div className="py-24 text-center">
+          <h2
+            className="text-2xl font-black text-[#0a0a0a] mb-3"
+            style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
+          >
+            No posts yet
+          </h2>
+          <p className="text-[#6b6860] text-sm">
+            Drop some MDX files in <code className="bg-[#f0efec] px-1.5 py-0.5">content/posts/</code> to get started.
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts.map((post) => (
-            <PostCard key={post.slug} post={post} />
-          ))}
-        </div>
+        <>
+          {/* First row — 3 cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-2">
+            {posts.slice(0, 3).map((post, i) => (
+              <PostCard key={post.slug} post={post} index={i} />
+            ))}
+          </div>
+
+          {/* Remaining as rows */}
+          {posts.slice(3).length > 0 && (
+            <div className="border-t-2 border-[#0a0a0a] mt-8">
+              {posts.slice(3).map((post, i) => (
+                <PostCard key={post.slug} post={post} index={i + 3} variant="row" />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

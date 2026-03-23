@@ -40,72 +40,76 @@ export default async function PostPage({ params }: Props) {
   const cat = getCategoryBySlug(post.category);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="max-w-7xl mx-auto px-6 lg:px-10">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-8">
-        <Link href="/" className="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Home</Link>
-        <span>·</span>
-        <Link href="/blog" className="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Blog</Link>
+      <nav className="flex items-center gap-2 py-5 border-b border-[#d6d3cc] mb-10">
+        <Link href="/" className="label-upper text-[#6b6860] hover:text-[#0a0a0a] transition-colors">Home</Link>
+        <span className="text-[#d6d3cc]">·</span>
+        <Link href="/blog" className="label-upper text-[#6b6860] hover:text-[#0a0a0a] transition-colors">All Posts</Link>
         {cat && (
           <>
-            <span>·</span>
-            <Link
-              href={`/category/${cat.slug}`}
-              className={`hover:underline transition-colors ${cat.color}`}
-            >
-              {cat.emoji} {cat.name}
+            <span className="text-[#d6d3cc]">·</span>
+            <Link href={`/category/${cat.slug}`} className="label-upper text-[#6b6860] hover:text-[#0a0a0a] transition-colors">
+              {cat.name}
             </Link>
           </>
         )}
       </nav>
 
-      {/* Header */}
-      <header className="mb-10">
-        {cat && (
-          <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full mb-4 ${cat.badgeColor}`}>
-            {cat.emoji} {cat.name}
-          </span>
-        )}
-        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white leading-tight mb-4">
-          {post.title}
-        </h1>
-        <p className="text-lg text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
-          {post.excerpt}
-        </p>
-        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400 pb-6 border-b border-gray-200 dark:border-gray-700">
-          <span className="font-medium text-gray-700 dark:text-gray-300">{post.author}</span>
-          <span>·</span>
-          <time dateTime={post.date}>{formatDate(post.date)}</time>
-          <span>·</span>
-          <span>{post.readingTime}</span>
-        </div>
+      <div className="max-w-3xl mx-auto">
+        {/* Header */}
+        <header className="mb-10">
+          {cat && (
+            <span className="label-upper text-[#6b6860] block mb-4">{cat.name}</span>
+          )}
+          <h1
+            className="text-4xl md:text-5xl font-black text-[#0a0a0a] leading-tight tracking-tight mb-6"
+            style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
+          >
+            {post.title}
+          </h1>
+          <p className="text-lg text-[#6b6860] leading-relaxed mb-8">
+            {post.excerpt}
+          </p>
+          <div className="flex flex-wrap items-center gap-3 pb-8 border-b-2 border-[#0a0a0a]">
+            <span className="label-upper text-[#0a0a0a] font-bold">{post.author}</span>
+            <span className="text-[#d6d3cc]">·</span>
+            <span className="label-upper text-[#6b6860]">
+              <time dateTime={post.date}>{formatDate(post.date)}</time>
+            </span>
+            <span className="text-[#d6d3cc]">·</span>
+            <span className="label-upper text-[#6b6860]">{post.readingTime}</span>
+          </div>
+        </header>
+
+        {/* Content */}
+        <article className="prose prose-lg max-w-none">
+          <MDXRemote source={post.content} />
+        </article>
+
+        {/* Tags */}
         {post.tags && post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4">
+          <div className="flex flex-wrap gap-2 mt-10 pt-6 border-t border-[#d6d3cc]">
             {post.tags.map((tag) => (
               <span
                 key={tag}
-                className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2.5 py-1 rounded-lg"
+                className="label-upper bg-[#f0efec] text-[#6b6860] px-3 py-1.5"
               >
-                #{tag}
+                {tag}
               </span>
             ))}
           </div>
         )}
-      </header>
 
-      {/* Content */}
-      <article className="prose prose-gray dark:prose-invert max-w-none prose-headings:font-bold prose-a:text-violet-600 dark:prose-a:text-violet-400 prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-950">
-        <MDXRemote source={post.content} />
-      </article>
-
-      {/* Back link */}
-      <div className="mt-12 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <Link
-          href="/blog"
-          className="inline-flex items-center gap-2 text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline"
-        >
-          ← Back to all posts
-        </Link>
+        {/* Back link */}
+        <div className="mt-12 pt-6 border-t-2 border-[#0a0a0a]">
+          <Link
+            href="/blog"
+            className="label-upper text-[#0a0a0a] hover:opacity-60 transition-opacity"
+          >
+            ← Back to all posts
+          </Link>
+        </div>
       </div>
     </div>
   );
