@@ -32,10 +32,18 @@ export function getPostBySlug(slug: string): Post {
   const fm = data as PostFrontmatter;
   const rt = readingTime(content);
 
+  const PAYWALL_MARKER = "PAYWALL_BREAK";
+  const markerIndex = content.indexOf(PAYWALL_MARKER);
+  const freeContent =
+    fm.paywalled && markerIndex !== -1
+      ? content.slice(0, markerIndex).trim()
+      : undefined;
+
   return {
     ...fm,
     slug,
     content,
+    freeContent,
     readingTime: rt.text,
     tags: fm.tags ?? [],
   };

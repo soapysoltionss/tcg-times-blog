@@ -5,6 +5,7 @@ import { MDXRemote } from "next-mdx-remote/rsc";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import PaywallGate from "@/components/PaywallGate";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -84,8 +85,13 @@ export default async function PostPage({ params }: Props) {
 
         {/* Content */}
         <article className="prose prose-lg max-w-none">
-          <MDXRemote source={post.content} />
+          <MDXRemote source={post.paywalled && post.freeContent ? post.freeContent : post.content} />
         </article>
+
+        {/* Paywall gate */}
+        {post.paywalled && post.freeContent && (
+          <PaywallGate title={post.title} />
+        )}
 
         {/* Tags */}
         {post.tags && post.tags.length > 0 && (

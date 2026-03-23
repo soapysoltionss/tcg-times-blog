@@ -9,7 +9,6 @@ type Props = {
   featured?: boolean;
   variant?: "row" | "card";
 };
-
 export default function PostCard({ post, index, featured = false, variant = "card" }: Props) {
   const cat = getCategoryBySlug(post.category);
   const num = index !== undefined ? String(index + 1).padStart(2, "0") : null;
@@ -38,6 +37,9 @@ export default function PostCard({ post, index, featured = false, variant = "car
 
         {/* Meta */}
         <div className="text-right hidden sm:block">
+          {post.paywalled && (
+            <span className="label-upper bg-[#0a0a0a] text-[#fafaf8] px-2 py-1 block mb-2">Subscriber</span>
+          )}
           <p className="label-upper text-[#6b6860]">{formatDate(post.date)}</p>
           <p className="label-upper text-[#6b6860] mt-1">{post.readingTime}</p>
         </div>
@@ -49,7 +51,12 @@ export default function PostCard({ post, index, featured = false, variant = "car
     <article className="group border-t border-[#d6d3cc] pt-5 pb-6 flex flex-col gap-3">
       {/* Top meta row */}
       <div className="flex items-center justify-between">
-        {cat && <span className="label-upper text-[#6b6860]">{cat.name}</span>}
+        <div className="flex items-center gap-3">
+          {cat && <span className="label-upper text-[#6b6860]">{cat.name}</span>}
+          {post.paywalled && (
+            <span className="label-upper bg-[#0a0a0a] text-[#fafaf8] px-2 py-0.5">Subscriber</span>
+          )}
+        </div>
         {num && <span className="label-upper text-[#d6d3cc]">{num}</span>}
       </div>
 
