@@ -43,3 +43,4 @@ yarn-error.log*
 DOCS.md
 MARKDOWN.md
 next-env.d.ts
+*.har

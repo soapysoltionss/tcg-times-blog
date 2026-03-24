@@ -85,23 +85,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
 
   callbacks: {
-    // Embed provider info into the JWT so /api/auth/complete can use it
+    // Embed provider info into the JWT so we can read it later
     async jwt({ token, account, user }) {
       if (account && user) {
         token.provider = account.provider;
         token.providerAccountId = account.providerAccountId;
+        token.oauthEmail = user.email ?? "";
+        token.oauthName = user.name ?? "";
+        token.oauthImage = user.image ?? "";
       }
       return token;
     },
 
-    // Expose provider info on the session object
+    // Expose on session object
     async session({ session, token }) {
       (session as any).provider = token.provider;
       (session as any).providerAccountId = token.providerAccountId;
+      (session as any).oauthEmail = token.oauthEmail;
+      (session as any).oauthName = token.oauthName;
+      (session as any).oauthImage = token.oauthImage;
       return session;
     },
 
-    // After Google completes, bounce to /api/auth/complete which sets our tcgt_session cookie
+    // After sign-in, redirect to /api/auth/complete
+    // Pass email in URL (signed via AUTH_SECRET already protects the session)
     async redirect({ url, baseUrl }) {
       if (url.includes("/profile") || url === baseUrl || url === `${baseUrl}/`) {
         return `${baseUrl}/api/auth/complete`;
