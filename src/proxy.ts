@@ -7,6 +7,7 @@ const PUBLIC_PATHS = [
   "/api/auth",
   "/login",
   "/register",
+  "/verify-email",
   "/forgot-password",
 ];
 

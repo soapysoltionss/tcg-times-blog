@@ -56,6 +56,8 @@ export default function RegisterPage() {
     if (usernameStatus === "taken") e.username = "That username is already taken.";
     if (!form.firstName.trim()) e.firstName = "Required.";
     if (!form.lastName.trim()) e.lastName = "Required.";
+    if (!form.email.trim()) e.email = "Required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "Enter a valid email.";
     if (!form.password) e.password = "Required.";
     else if (form.password.length < 8) e.password = "At least 8 characters.";
     if (form.password !== form.confirmPassword) e.confirmPassword = "Passwords do not match.";
@@ -76,7 +78,8 @@ export default function RegisterPage() {
     });
 
     if (res.ok) {
-      window.location.href = "/profile";
+      const data = await res.json();
+      window.location.href = `/verify-email?email=${encodeURIComponent(data.email)}`;
     } else {
       const data = await res.json();
       setGlobalError(data.error ?? "Something went wrong.");
@@ -189,16 +192,17 @@ export default function RegisterPage() {
           />
         </div>
 
-        {/* Email (optional) */}
+        {/* Email (required) */}
         <AuthField
-          label="Email (optional)"
+          label="Email"
           type="email"
           value={form.email}
           onChange={set("email")}
           placeholder="you@example.com"
           autoComplete="email"
+          required
           index={3}
-          hint="Used for future password recovery."
+          error={errors.email}
         />
 
         <div className="w-full h-px bg-[var(--border)] my-1" />

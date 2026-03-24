@@ -37,6 +37,11 @@ export type User = {
   oauthAccounts?: OAuthAccount[];
   /** Avatar URL from OAuth provider */
   avatarUrl?: string;
+  /** Whether the email address has been verified */
+  emailVerified?: boolean;
+  /** 6-digit code + expiry for email verification or password reset */
+  verificationCode?: string;
+  verificationCodeExpiresAt?: string;
 };
 
 // ---------------------------------------------------------------------------
