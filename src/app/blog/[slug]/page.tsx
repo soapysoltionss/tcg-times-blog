@@ -7,6 +7,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import PaywallGate from "@/components/PaywallGate";
 import CommentsSection from "@/components/CommentsSection";
+import { getSession } from "@/lib/session";
+import { getUserById } from "@/lib/db";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -37,6 +39,17 @@ export default async function PostPage({ params }: Props) {
     post = getPostBySlug(slug);
   } catch {
     notFound();
+  }
+
+  // Resolve subscriber status server-side for the paywall gate
+  const session = await getSession();
+  let isSubscriber = session?.isSubscriber ?? false;
+  if (!isSubscriber && session?.userId) {
+    // Double-check against the DB (session token may be stale)
+    const user = await getUserById(session.userId);
+    isSubscriber =
+      user?.subscription?.status === "active" ||
+      user?.subscription?.status === "declined";
   }
 
   const cat = getCategoryBySlug(post.category);
@@ -100,12 +113,16 @@ export default async function PostPage({ params }: Props) {
 
         {/* Content */}
         <article className="prose prose-lg max-w-none">
-          <MDXRemote source={post.paywalled && post.freeContent ? post.freeContent : post.content} />
+          <MDXRemote source={
+            post.paywalled && post.freeContent && !isSubscriber
+              ? post.freeContent
+              : post.content
+          } />
         </article>
 
         {/* Paywall gate */}
         {post.paywalled && post.freeContent && (
-          <PaywallGate title={post.title} />
+          <PaywallGate title={post.title} isSubscriber={isSubscriber} />
         )}
 
         {/* Tags */}

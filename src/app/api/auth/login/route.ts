@@ -20,7 +20,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid username or password." }, { status: 401 });
   }
 
-  const token = await signSession({ userId: user.id, username: user.username });
+  const isSubscriber =
+    user.subscription?.status === "active" ||
+    user.subscription?.status === "declined";
+
+  const token = await signSession({ userId: user.id, username: user.username, isSubscriber });
   const res = NextResponse.json({ ok: true, username: user.username });
   setSessionCookie(res, token);
   return res;

@@ -12,6 +12,8 @@ const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 export type SessionPayload = {
   userId: string;
   username: string;
+  /** True when user has an active or declined (grace-period) Patreon subscription */
+  isSubscriber?: boolean;
 };
 
 export async function signSession(payload: SessionPayload): Promise<string> {

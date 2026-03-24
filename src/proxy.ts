@@ -5,8 +5,9 @@ import { NextRequest, NextResponse } from "next/server";
 const PUBLIC_PATHS = [
   "/coming-soon",
   "/api/unlock",
-  "/api/interest",          // interest / notify-me form — no password needed
-  "/api/comments/approve",  // Vercel Cron — called server-to-server
+  "/api/interest",              // notify-me form
+  "/api/comments/approve",      // Vercel Cron
+  "/api/auth/patreon-webhook",  // Patreon server-to-server webhook
 ];
 
 export function proxy(req: NextRequest) {

@@ -227,6 +227,46 @@ export default function ProfilePage() {
       {/* XP Bar */}
       <XpBar xp={user.xp} />
 
+      {/* Subscription status card */}
+      {user.subscription ? (
+        <div className="border border-[var(--border)] p-5 mb-8 flex items-center justify-between gap-4">
+          <div>
+            <p className="label-upper text-[var(--text-muted)] mb-1">Patreon Subscription</p>
+            <p className="font-bold text-[var(--foreground)]">{user.subscription.tierName}</p>
+            {user.subscription.currentPeriodEnd && (
+              <p className="label-upper text-[var(--text-muted)] text-[10px] mt-1">
+                Next charge:{" "}
+                {new Date(user.subscription.currentPeriodEnd).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+          <span
+            className={`label-upper px-2 py-1 text-[10px] border ${
+              user.subscription.status === "active"
+                ? "border-[var(--border-strong)] text-[var(--foreground)]"
+                : user.subscription.status === "declined"
+                ? "border-[var(--border)] text-[var(--text-muted)]"
+                : "border-[var(--border)] text-[var(--text-muted)] line-through"
+            }`}
+          >
+            {user.subscription.status}
+          </span>
+        </div>
+      ) : (
+        <div className="border border-[var(--border)] p-5 mb-8 flex items-center justify-between gap-4">
+          <div>
+            <p className="label-upper text-[var(--text-muted)] mb-1">Subscription</p>
+            <p className="text-sm text-[var(--text-muted)]">No active subscription</p>
+          </div>
+          <a
+            href="/subscribe"
+            className="label-upper px-4 py-2 bg-[var(--foreground)] text-[var(--background)] hover:opacity-70 transition-opacity text-[10px]"
+          >
+            Subscribe
+          </a>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex border-b border-[var(--border)] mb-8">
         {(["overview", "edit"] as const).map((tab) => (

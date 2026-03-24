@@ -15,5 +15,10 @@ export async function GET() {
 
   // Never send the password hash or raw OAuth tokens to the client
   const { passwordHash: _, oauthAccounts: __, ...safe } = user;
-  return NextResponse.json({ user: safe });
+
+  const isSubscriber =
+    user.subscription?.status === "active" ||
+    user.subscription?.status === "declined";
+
+  return NextResponse.json({ user: safe, isSubscriber });
 }

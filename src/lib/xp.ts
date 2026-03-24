@@ -21,6 +21,30 @@ export type OAuthAccount = {
   image?: string;
 };
 
+/**
+ * Patreon subscription state.
+ * Written when the user connects Patreon and refreshed via webhook.
+ */
+export type Subscription = {
+  /** Patreon member object id (from the memberships endpoint) */
+  patreonMemberId: string;
+  /** Patreon campaign tier id */
+  tierId: string;
+  /** Human-readable tier name e.g. "Monthly" */
+  tierName: string;
+  /**
+   * active   — currently paying, has access
+   * declined — payment failed, grace period
+   * cancelled — cancelled, access until currentPeriodEnd
+   * expired  — access ended
+   */
+  status: "active" | "declined" | "cancelled" | "expired";
+  /** ISO date string — when current paid period ends */
+  currentPeriodEnd?: string;
+  /** ISO date the subscription was last synced */
+  syncedAt: string;
+};
+
 export type User = {
   id: string;
   username: string;
@@ -52,6 +76,8 @@ export type User = {
   verificationCodeExpiresAt?: string;
   /** True for brand-new OAuth users who haven't chosen a username yet */
   needsUsername?: boolean;
+  /** Patreon subscription — set when the user connects Patreon, synced via webhook */
+  subscription?: Subscription;
 };
 
 // ---------------------------------------------------------------------------

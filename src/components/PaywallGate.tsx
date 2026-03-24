@@ -2,9 +2,14 @@ import Link from "next/link";
 
 type Props = {
   title: string;
+  /** If true, the gate is bypassed and nothing is rendered */
+  isSubscriber?: boolean;
 };
 
-export default function PaywallGate({ title }: Props) {
+export default function PaywallGate({ title, isSubscriber }: Props) {
+  // Subscriber — no gate needed (full content already rendered by the page)
+  if (isSubscriber) return null;
+
   return (
     <div className="relative my-12">
       {/* Fade-out overlay */}
@@ -66,7 +71,10 @@ export default function PaywallGate({ title }: Props) {
 
         <p className="label-upper text-[var(--text-muted)] mt-6">
           Already a subscriber?{" "}
-          <Link href="/login" className="text-[var(--foreground)] underline underline-offset-2 hover:opacity-60 transition-opacity">
+          <Link
+            href="/login"
+            className="text-[var(--foreground)] underline underline-offset-2 hover:opacity-60 transition-opacity"
+          >
             Sign in
           </Link>
         </p>

@@ -14,7 +14,26 @@ interface PatreonProfile {
       full_name: string;
       image_url: string;
     };
+    relationships?: {
+      memberships?: {
+        data: { id: string; type: string }[];
+      };
+    };
   };
+  included?: {
+    id: string;
+    type: string;
+    attributes: {
+      patron_status?: string;
+      next_charge_date?: string;
+      title?: string;
+    };
+    relationships?: {
+      currently_entitled_tiers?: {
+        data: { id: string; type: string }[];
+      };
+    };
+  }[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,11 +44,11 @@ function Patreon(options: OAuthUserConfig<PatreonProfile>): any {
     type: "oauth",
     authorization: {
       url: "https://www.patreon.com/oauth2/authorize",
-      params: { scope: "identity identity[email]" },
+      params: { scope: "identity identity[email] identity.memberships" },
     },
     token: "https://www.patreon.com/api/oauth2/token",
     userinfo:
-      "https://www.patreon.com/api/oauth2/v2/identity?fields[user]=email,full_name,image_url",
+      "https://www.patreon.com/api/oauth2/v2/identity?fields[user]=email,full_name,image_url&include=memberships&fields[member]=patron_status,currently_entitled_amount_cents,pledge_relationship_start,next_charge_date&fields[tier]=title",
     profile(profile: PatreonProfile) {
       const attr = profile.data.attributes;
       return {
@@ -93,6 +112,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.oauthEmail = user.email ?? "";
         token.oauthName = user.name ?? "";
         token.oauthImage = user.image ?? "";
+        // Store Patreon access token so complete/route.ts can call the Patreon API
+        if (account.provider === "patreon" && account.access_token) {
+          token.patreonAccessToken = account.access_token;
+        }
       }
       return token;
     },

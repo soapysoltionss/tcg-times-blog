@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { upsertOAuthUser } from "@/lib/db";
+import { upsertOAuthUser, saveUser } from "@/lib/db";
 import { signSession, setSessionCookie } from "@/lib/session";
+import { fetchPatreonSubscription } from "@/lib/patreon";
 
 /**
  * GET /api/auth/complete
@@ -66,6 +67,7 @@ export async function GET(req: NextRequest) {
     const provider = (payload.provider as string) || "google";
     const providerAccountId =
       (payload.providerAccountId as string) || email;
+    const patreonAccessToken = (payload.patreonAccessToken as string) || undefined;
 
     if (!email) {
       console.error("[complete] No email in NextAuth payload:", payload);
@@ -73,9 +75,6 @@ export async function GET(req: NextRequest) {
     }
 
     // ── 3. Upsert user into our DB ────────────────────────────────────────────
-    // Always upsert — this is the authoritative write point. events.signIn may
-    // have already written the user, but on Vercel each serverless invocation
-    // gets its own /tmp, so the two handlers may hit different instances.
     const dbUser = await upsertOAuthUser({
       provider,
       providerAccountId,
@@ -84,8 +83,36 @@ export async function GET(req: NextRequest) {
       image,
     });
 
-    // ── 4. Mint our tcgt_session cookie and redirect ──────────────────────────
-    const token = await signSession({ userId: dbUser.id, username: dbUser.username });
+    // ── 4. If this is a Patreon login, sync subscription tier ─────────────────
+    if (provider === "patreon" && patreonAccessToken) {
+      try {
+        const sub = await fetchPatreonSubscription(patreonAccessToken);
+        if (sub) {
+          dbUser.subscription = sub;
+        } else {
+          // Connected Patreon but not a member of our campaign
+          if (dbUser.subscription && dbUser.subscription.status !== "expired") {
+            dbUser.subscription = { ...dbUser.subscription, status: "expired", syncedAt: new Date().toISOString() };
+          }
+        }
+        dbUser.updatedAt = new Date().toISOString();
+        await saveUser(dbUser);
+      } catch (err) {
+        console.error("[complete] Patreon subscription sync failed:", err);
+        // Non-fatal — user still logs in, just without subscription sync
+      }
+    }
+
+    // ── 5. Mint our tcgt_session cookie and redirect ──────────────────────────
+    const isSubscriber =
+      dbUser.subscription?.status === "active" ||
+      dbUser.subscription?.status === "declined"; // grace period
+
+    const token = await signSession({
+      userId: dbUser.id,
+      username: dbUser.username,
+      isSubscriber,
+    });
     const destination = dbUser.needsUsername ? "/set-username" : "/profile";
     const res = NextResponse.redirect(new URL(destination, req.url));
     setSessionCookie(res, token);
