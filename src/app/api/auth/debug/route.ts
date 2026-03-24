@@ -1,13 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/session";
+import { getUserById } from "@/lib/db";
 
 /**
  * GET /api/auth/debug
  * GET /api/auth/debug?step=signin  — fetches the Google signin URL and follows it
+ * GET /api/auth/debug?step=subscriber — shows raw session + DB subscription for current user
  *
  * Temporary diagnostic endpoint — remove after OAuth is confirmed working.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
+
+  // --- step=subscriber: show raw session + DB subscription data ---
+  if (searchParams.get("step") === "subscriber") {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ session: null, note: "not logged in" });
+    }
+    const user = await getUserById(session.userId);
+    return NextResponse.json({
+      session,
+      dbSubscription: user?.subscription ?? null,
+      dbTasksRelatedToSubscribe: user?.tasks.filter((t) => t.id === "subscribe") ?? [],
+      isSubscriberComputed:
+        user?.subscription?.status === "active" ||
+        user?.subscription?.status === "declined",
+    });
+  }
 
   // --- step=signin: fetch the NextAuth signin endpoint and return what it does ---
   if (searchParams.get("step") === "signin") {
