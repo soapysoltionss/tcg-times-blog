@@ -1,22 +1,35 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextRequest, NextResponse } from "next/server";
 
 /**
  * GET /api/auth/debug
+ * GET /api/auth/debug?step=signin  — fetches the Google signin URL and follows it
  *
  * Temporary diagnostic endpoint — remove after OAuth is confirmed working.
- * Shows which env vars are present at runtime (values masked).
  */
-export async function GET() {
-  let nextAuthSession: unknown = null;
-  let nextAuthError: string | null = null;
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
 
-  try {
-    nextAuthSession = await auth();
-  } catch (e) {
-    nextAuthError = e instanceof Error ? e.message : String(e);
+  // --- step=signin: fetch the NextAuth signin endpoint and return what it does ---
+  if (searchParams.get("step") === "signin") {
+    const base = process.env.NEXTAUTH_URL ?? `https://${req.headers.get("host")}`;
+    const signinUrl = `${base}/api/auth/signin/google?callbackUrl=/profile`;
+
+    let status = 0;
+    let redirectedTo = "(none)";
+    let fetchError: string | null = null;
+
+    try {
+      const r = await fetch(signinUrl, { redirect: "manual" });
+      status = r.status;
+      redirectedTo = r.headers.get("location") ?? "(no location header)";
+    } catch (e) {
+      fetchError = e instanceof Error ? e.message : String(e);
+    }
+
+    return NextResponse.json({ signinUrl, status, redirectedTo, fetchError });
   }
 
+  // --- default: env var check ---
   return NextResponse.json({
     hasAuthSecret: !!process.env.AUTH_SECRET,
     authSecretLength: process.env.AUTH_SECRET?.length ?? 0,
@@ -29,12 +42,9 @@ export async function GET() {
       ? process.env.GOOGLE_CLIENT_ID.slice(0, 8) + "..."
       : "(missing)",
     hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
-    hasPatreonClientId: !!process.env.PATREON_CLIENT_ID,
-    hasPatreonClientSecret: !!process.env.PATREON_CLIENT_SECRET,
     nextauthUrl: process.env.NEXTAUTH_URL ?? "(not set)",
     nodeEnv: process.env.NODE_ENV,
-    // Try initialising NextAuth to surface any startup errors
-    nextAuthSession,
-    nextAuthError,
+    // What the /api/auth/providers endpoint returns
+    callbackUrl: `${process.env.NEXTAUTH_URL}/api/auth/callback/google`,
   });
 }
