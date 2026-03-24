@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Paths that are always public — the lock page itself and its API
-const PUBLIC_PATHS = ["/coming-soon", "/api/unlock"];
+// Paths that are always public — the lock page itself, its API, and auth routes
+const PUBLIC_PATHS = [
+  "/coming-soon",
+  "/api/unlock",
+  "/api/auth",
+  "/login",
+  "/register",
+  "/forgot-password",
+];
 
 export function proxy(req: NextRequest) {
   // If the site isn't locked, do nothing

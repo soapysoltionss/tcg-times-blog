@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function ComingSoonPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,8 +20,8 @@ export default function ComingSoonPage() {
     });
 
     if (res.ok) {
-      router.push("/");
-      router.refresh();
+      // Hard navigation so the proxy re-reads the new cookie server-side
+      window.location.href = "/";
     } else {
       setError("Incorrect password.");
       setLoading(false);

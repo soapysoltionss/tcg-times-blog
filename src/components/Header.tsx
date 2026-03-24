@@ -2,6 +2,7 @@ import Link from "next/link";
 import { gameCategories } from "@/config/site";
 import { siteConfig } from "@/config/site";
 import ThemeToggle from "@/components/ThemeToggle";
+import UserMenu from "@/components/UserMenu";
 
 export default function Header() {
   return (
@@ -13,9 +14,7 @@ export default function Header() {
             Trading Card Game Theory &amp; Strategy
           </span>
           <div className="flex items-center gap-4">
-            <span className="label-upper text-[var(--text-muted)] hidden sm:inline">
-              tcgtimes.blog
-            </span>
+            <UserMenu />
             <ThemeToggle />
           </div>
         </div>
@@ -80,7 +79,9 @@ export default function Header() {
                 </Link>
               ))}
               <Link href="/blog" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">All Posts</Link>
-              <Link href="/about" className="label-upper block py-2.5 text-[var(--foreground)] hover:bg-[var(--muted)] px-1 transition-colors">About</Link>
+              <Link href="/about" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">About</Link>
+              <Link href="/profile" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">Profile</Link>
+              <Link href="/login" className="label-upper block py-2.5 text-[var(--foreground)] hover:bg-[var(--muted)] px-1 transition-colors">Sign In</Link>
             </div>
           </details>
         </div>
