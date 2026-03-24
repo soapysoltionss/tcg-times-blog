@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import AuthCard from "@/components/AuthCard";
 import AuthField from "@/components/AuthField";
 
@@ -35,7 +34,7 @@ export default function LoginPage() {
 
   async function handleOAuth(provider: "google" | "patreon") {
     setOauthLoading(provider);
-    await signIn(provider, { callbackUrl: "/profile" });
+    window.location.href = `/api/auth/signin/${provider}?callbackUrl=/profile`;
   }
 
   return (
