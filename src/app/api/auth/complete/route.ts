@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserByEmail } from "@/lib/db";
+import { getUserByEmail, upsertOAuthUser } from "@/lib/db";
 import { signSession, setSessionCookie } from "@/lib/session";
 import { auth } from "@/auth";
 
@@ -7,13 +7,12 @@ import { auth } from "@/auth";
  * GET /api/auth/complete
  *
  * Called by NextAuth's redirect callback after a successful OAuth sign-in.
- * By this point the `events.signIn` hook has already upserted the user into
- * our DB. We just read the NextAuth session to get their email, look up our
- * DB user, set our own tcgt_session cookie, and redirect to /profile.
+ * Email is the primary key — we look up by email, and re-upsert if the
+ * ephemeral /tmp DB was wiped (Vercel cold start). The 30-day tcgt_session
+ * cookie keeps the user logged in across visits.
  */
 export async function GET(req: NextRequest) {
   try {
-    // Read the NextAuth session (the user was just signed in)
     const session = await auth();
 
     if (!session?.user?.email) {
@@ -21,14 +20,24 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL("/login?error=OAuthCallback", req.url));
     }
 
-    const dbUser = getUserByEmail(session.user.email);
+    const { email, name, image } = session.user;
+
+    // Look up by email (primary key). If not found (e.g. Vercel /tmp wiped),
+    // re-upsert from the NextAuth session — this is safe and idempotent.
+    let dbUser = getUserByEmail(email);
     if (!dbUser) {
-      console.error("OAuth complete: user not found in DB for", session.user.email);
-      return NextResponse.redirect(new URL("/login?error=OAuthCallback", req.url));
+      const provider = (session as any).provider ?? "google";
+      const providerAccountId = (session as any).providerAccountId ?? email;
+      dbUser = upsertOAuthUser({
+        provider,
+        providerAccountId,
+        email,
+        name: name ?? "User",
+        image: image ?? undefined,
+      });
     }
 
     const token = await signSession({ userId: dbUser.id, username: dbUser.username });
-    // New OAuth users who haven't chosen a username yet go to /set-username first
     const destination = dbUser.needsUsername ? "/set-username" : "/profile";
     const res = NextResponse.redirect(new URL(destination, req.url));
     setSessionCookie(res, token);

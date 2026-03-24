@@ -79,9 +79,9 @@ export function getUserByProvider(provider: string, providerAccountId: string): 
 
 /**
  * Find-or-create a user from an OAuth sign-in.
- * - If the providerAccountId is already linked → return that user.
- * - If the email matches an existing user → link the new provider account.
- * - Otherwise → create a brand new user with a generated username.
+ * Email is the primary key — one account per email address.
+ * - If the email matches an existing user → refresh avatar + link provider if new.
+ * - Otherwise → create a brand new user.
  */
 export function upsertOAuthUser(opts: {
   provider: string;
@@ -92,22 +92,20 @@ export function upsertOAuthUser(opts: {
 }): User {
   const { provider, providerAccountId, email, name, image } = opts;
 
-  // 1. Already linked to this OAuth account
-  let user = getUserByProvider(provider, providerAccountId);
-  if (user) {
-    // Refresh avatar
-    user.avatarUrl = image ?? user.avatarUrl;
-    user.updatedAt = new Date().toISOString();
-    saveUser(user);
-    return user;
-  }
+  // Primary lookup: email is the canonical key
+  let user = getUserByEmail(email);
 
-  // 2. Email matches an existing account → link provider
-  user = getUserByEmail(email);
   if (user) {
+    // Refresh avatar from provider
+    if (image) user.avatarUrl = image;
+    // Link this OAuth account if not already linked
     user.oauthAccounts = user.oauthAccounts ?? [];
-    user.oauthAccounts.push({ provider, providerAccountId, email, name, image });
-    user.avatarUrl = user.avatarUrl ?? image;
+    const alreadyLinked = user.oauthAccounts.some(
+      (a) => a.provider === provider && a.providerAccountId === providerAccountId
+    );
+    if (!alreadyLinked) {
+      user.oauthAccounts.push({ provider, providerAccountId, email, name, image });
+    }
     user.updatedAt = new Date().toISOString();
     saveUser(user);
     return user;
