@@ -58,17 +58,29 @@ function Patreon(options: OAuthUserConfig<PatreonProfile>): any {
 // NextAuth config
 // ---------------------------------------------------------------------------
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  providers: [
+// Only register providers whose credentials are actually configured
+const providers = [];
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  providers.push(
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    })
+  );
+}
+
+if (process.env.PATREON_CLIENT_ID && process.env.PATREON_CLIENT_SECRET) {
+  providers.push(
     Patreon({
-      clientId: process.env.PATREON_CLIENT_ID!,
-      clientSecret: process.env.PATREON_CLIENT_SECRET!,
-    }),
-  ],
+      clientId: process.env.PATREON_CLIENT_ID,
+      clientSecret: process.env.PATREON_CLIENT_SECRET,
+    })
+  );
+}
+
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  providers,
 
   // We don't use NextAuth sessions — we issue our own JWT cookie.
   session: { strategy: "jwt" },

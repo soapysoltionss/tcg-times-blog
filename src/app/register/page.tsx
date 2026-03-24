@@ -21,7 +21,17 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [globalError, setGlobalError] = useState("");
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+  const [oauthProviders, setOauthProviders] = useState<{ google: boolean; patreon: boolean } | null>(null);
   const usernameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/oauth-providers")
+      .then((r) => r.json())
+      .then(setOauthProviders)
+      .catch(() => setOauthProviders({ google: false, patreon: false }));
+  }, []);
+
+  const showOAuth = oauthProviders && (oauthProviders.google || oauthProviders.patreon);
 
   function set(field: string) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,43 +122,51 @@ export default function RegisterPage() {
         </>
       }
     >
-      {/* OAuth buttons */}
-      <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <button
-          type="button"
-          onClick={() => handleOAuth("google")}
-          disabled={!!oauthLoading || loading}
-          className="flex items-center justify-center gap-3 w-full border border-[var(--border)] py-3 px-4 hover:border-[var(--border-strong)] hover:bg-[var(--muted)] transition-all disabled:opacity-40"
-        >
-          {oauthLoading === "google" ? (
-            <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <GoogleIcon />
-          )}
-          <span className="text-sm font-medium">Continue with Google</span>
-        </button>
+      {/* OAuth buttons — only shown when provider credentials are configured */}
+      {showOAuth && (
+        <>
+          <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {oauthProviders?.google && (
+              <button
+                type="button"
+                onClick={() => handleOAuth("google")}
+                disabled={!!oauthLoading || loading}
+                className="flex items-center justify-center gap-3 w-full border border-[var(--border)] py-3 px-4 hover:border-[var(--border-strong)] hover:bg-[var(--muted)] transition-all disabled:opacity-40"
+              >
+                {oauthLoading === "google" ? (
+                  <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <GoogleIcon />
+                )}
+                <span className="text-sm font-medium">Continue with Google</span>
+              </button>
+            )}
 
-        <button
-          type="button"
-          onClick={() => handleOAuth("patreon")}
-          disabled={!!oauthLoading || loading}
-          className="flex items-center justify-center gap-3 w-full border border-[var(--border)] py-3 px-4 hover:border-[var(--border-strong)] hover:bg-[var(--muted)] transition-all disabled:opacity-40"
-        >
-          {oauthLoading === "patreon" ? (
-            <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <PatreonIcon />
-          )}
-          <span className="text-sm font-medium">Continue with Patreon</span>
-        </button>
-      </div>
+            {oauthProviders?.patreon && (
+              <button
+                type="button"
+                onClick={() => handleOAuth("patreon")}
+                disabled={!!oauthLoading || loading}
+                className="flex items-center justify-center gap-3 w-full border border-[var(--border)] py-3 px-4 hover:border-[var(--border-strong)] hover:bg-[var(--muted)] transition-all disabled:opacity-40"
+              >
+                {oauthLoading === "patreon" ? (
+                  <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <PatreonIcon />
+                )}
+                <span className="text-sm font-medium">Continue with Patreon</span>
+              </button>
+            )}
+          </div>
 
-      {/* Divider */}
-      <div className="flex items-center gap-3 my-1">
-        <div className="flex-1 border-t border-[var(--border)]" />
-        <span className="text-xs text-[var(--text-muted)] label-upper">or register with email</span>
-        <div className="flex-1 border-t border-[var(--border)]" />
-      </div>
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-1">
+            <div className="flex-1 border-t border-[var(--border)]" />
+            <span className="text-xs text-[var(--text-muted)] label-upper">or register with email</span>
+            <div className="flex-1 border-t border-[var(--border)]" />
+          </div>
+        </>
+      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {/* Username */}
