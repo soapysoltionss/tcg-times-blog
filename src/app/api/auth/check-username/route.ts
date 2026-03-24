@@ -7,5 +7,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ taken: false });
   }
   const existing = getUserByUsername(username);
-  return NextResponse.json({ taken: !!existing });
+  return NextResponse.json({ available: !existing, taken: !!existing });
 }
