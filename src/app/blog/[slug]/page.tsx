@@ -10,6 +10,10 @@ import CommentsSection from "@/components/CommentsSection";
 import { getSession } from "@/lib/session";
 import { getUserById } from "@/lib/db";
 
+// Must run per-request so that session / subscriber status is evaluated live,
+// not baked in at build time.
+export const dynamic = "force-dynamic";
+
 type Props = {
   params: Promise<{ slug: string }>;
 };

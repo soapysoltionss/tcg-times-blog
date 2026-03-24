@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { upsertOAuthUser, saveUser } from "@/lib/db";
+import { upsertOAuthUser, saveUser, completeTask } from "@/lib/db";
 import { signSession, setSessionCookie } from "@/lib/session";
 import { fetchPatreonSubscription } from "@/lib/patreon";
 
@@ -97,6 +97,13 @@ export async function GET(req: NextRequest) {
         }
         dbUser.updatedAt = new Date().toISOString();
         await saveUser(dbUser);
+        // Award the subscribe quest when the patron is active (or in grace period)
+        if (
+          dbUser.subscription?.status === "active" ||
+          dbUser.subscription?.status === "declined"
+        ) {
+          await completeTask(dbUser.id, "subscribe").catch(() => {/* non-fatal */});
+        }
       } catch (err) {
         console.error("[complete] Patreon subscription sync failed:", err);
         // Non-fatal — user still logs in, just without subscription sync

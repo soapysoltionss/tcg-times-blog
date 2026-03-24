@@ -133,6 +133,10 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<"overview" | "edit">("overview");
 
   useEffect(() => {
+    // Sync subscription status first (re-mints session cookie with correct
+    // isSubscriber flag and awards the subscribe quest if needed).
+    fetch("/api/auth/sync-subscription", { method: "POST" }).catch(() => {/* non-fatal */});
+
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then(({ user }) => {

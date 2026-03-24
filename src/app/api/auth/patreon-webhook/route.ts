@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { getUserByProvider, saveUser } from "@/lib/db";
+import { getUserByProvider, saveUser, completeTask } from "@/lib/db";
 import { parseWebhookMember } from "@/lib/patreon";
 
 /**
@@ -150,6 +150,14 @@ export async function POST(req: NextRequest) {
 
   dbUser.updatedAt = new Date().toISOString();
   await saveUser(dbUser);
+
+  // Award the subscribe quest whenever the patron becomes active
+  if (
+    dbUser.subscription?.status === "active" ||
+    dbUser.subscription?.status === "declined"
+  ) {
+    await completeTask(dbUser.id, "subscribe").catch(() => {/* non-fatal */});
+  }
 
   console.log(`[patreon-webhook] ${event} → user ${dbUser.id} subscription=${dbUser.subscription?.status}`);
   return NextResponse.json({ ok: true });
