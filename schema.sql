@@ -28,3 +28,25 @@ CREATE TABLE IF NOT EXISTS interest (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   notified   BOOLEAN     NOT NULL DEFAULT false
 );
+
+-- ---------------------------------------------------------------------------
+-- Article comments
+-- approved=false means "pending moderation" (professional article comments
+-- wait 2 hours before becoming visible). Community article comments are
+-- inserted with approved=true immediately.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS comments (
+  id           TEXT        PRIMARY KEY,
+  slug         TEXT        NOT NULL,
+  author_id    TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body         TEXT        NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  approved     BOOLEAN     NOT NULL DEFAULT false,
+  approved_at  TIMESTAMPTZ,
+  article_type TEXT        NOT NULL DEFAULT 'community' -- 'community' | 'professional'
+);
+
+CREATE INDEX IF NOT EXISTS idx_comments_slug        ON comments (slug);
+CREATE INDEX IF NOT EXISTS idx_comments_pending     ON comments (approved, created_at)
+  WHERE approved = false;

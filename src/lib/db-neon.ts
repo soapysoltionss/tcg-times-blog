@@ -21,6 +21,7 @@
 import { neon } from "@neondatabase/serverless";
 import type { User } from "@/lib/xp";
 import { TASK_CATALOGUE, xpToLevel } from "@/lib/xp";
+import type { PostComment } from "@/types/post";
 
 export type { User };
 export { TASK_CATALOGUE, xpToLevel };
@@ -219,4 +220,96 @@ export async function completeTask(
 
   await saveUser(user);
   return user;
+}
+
+// ---------------------------------------------------------------------------
+// Comments
+// ---------------------------------------------------------------------------
+
+function rowToComment(row: Record<string, unknown>): PostComment {
+  return {
+    id:              row.id as string,
+    slug:            row.slug as string,
+    authorId:        row.author_id as string,
+    authorUsername:  row.author_username as string,
+    authorAvatarUrl: row.author_avatar_url as string | undefined,
+    body:            row.body as string,
+    createdAt:       (row.created_at as Date).toISOString(),
+    approved:        row.approved as boolean,
+    approvedAt:      row.approved_at ? (row.approved_at as Date).toISOString() : undefined,
+  };
+}
+
+/**
+ * Return all approved comments for a slug, plus any pending comments
+ * belonging to `currentUserId` (so the author can see their own pending comment).
+ */
+export async function getComments(
+  slug: string,
+  currentUserId?: string
+): Promise<PostComment[]> {
+  const db = sql();
+  const rows = await db`
+    SELECT
+      c.id,
+      c.slug,
+      c.author_id,
+      u.username  AS author_username,
+      (u.data->>'avatarUrl') AS author_avatar_url,
+      c.body,
+      c.created_at,
+      c.approved,
+      c.approved_at
+    FROM comments c
+    JOIN users u ON u.id = c.author_id
+    WHERE c.slug = ${slug}
+      AND (
+        c.approved = true
+        OR (${currentUserId ?? ""} <> '' AND c.author_id = ${currentUserId ?? ""})
+      )
+    ORDER BY c.created_at ASC
+  `;
+  return rows.map(rowToComment);
+}
+
+export async function addComment(comment: {
+  id: string;
+  slug: string;
+  authorId: string;
+  body: string;
+  approved: boolean;
+  approvedAt: string | null;
+  articleType: string;
+}): Promise<PostComment> {
+  const db = sql();
+  const rows = await db`
+    INSERT INTO comments (id, slug, author_id, body, approved, approved_at, article_type)
+    VALUES (
+      ${comment.id},
+      ${comment.slug},
+      ${comment.authorId},
+      ${comment.body},
+      ${comment.approved},
+      ${comment.approvedAt ?? null},
+      ${comment.articleType}
+    )
+    RETURNING
+      comments.*,
+      (SELECT username  FROM users WHERE id = ${comment.authorId}) AS author_username,
+      (SELECT data->>'avatarUrl' FROM users WHERE id = ${comment.authorId}) AS author_avatar_url
+  `;
+  return rowToComment(rows[0] as Record<string, unknown>);
+}
+
+/** Approve all professional comments that were created more than 2 hours ago. */
+export async function approveStaleComments(): Promise<number> {
+  const db = sql();
+  const result = await db`
+    UPDATE comments
+    SET approved = true, approved_at = now()
+    WHERE approved = false
+      AND article_type = 'professional'
+      AND created_at <= now() - INTERVAL '2 hours'
+  `;
+  return result.length;
 }

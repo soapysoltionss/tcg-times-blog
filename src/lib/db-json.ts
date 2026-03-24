@@ -11,10 +11,11 @@ import fs from "fs";
 import path from "path";
 import type { User } from "@/lib/xp";
 import { TASK_CATALOGUE, xpToLevel } from "@/lib/xp";
+import type { PostComment } from "@/types/post";
 
 export { TASK_CATALOGUE, xpToLevel };
 
-type Db = { users: User[] };
+type Db = { users: User[]; comments: PostComment[] };
 
 function dbPath(): string {
   return path.join(process.cwd(), "data", "users.json");
@@ -24,7 +25,7 @@ function readDb(): Db {
   try {
     return JSON.parse(fs.readFileSync(dbPath(), "utf-8")) as Db;
   } catch {
-    return { users: [] };
+    return { users: [], comments: [] };
   }
 }
 
@@ -181,4 +182,76 @@ export async function completeTask(
   db.users[idx] = user;
   writeDb(db);
   return user;
+}
+
+// ---------------------------------------------------------------------------
+// Comments (local dev — stored inside data/users.json under "comments" key)
+// ---------------------------------------------------------------------------
+
+export async function getComments(
+  slug: string,
+  currentUserId?: string
+): Promise<PostComment[]> {
+  const db = readDb();
+  const all = db.comments ?? [];
+  const user = currentUserId ? db.users.find((u) => u.id === currentUserId) : undefined;
+  return all
+    .filter(
+      (c) =>
+        c.slug === slug &&
+        (c.approved || (currentUserId && c.authorId === currentUserId))
+    )
+    .map((c) => {
+      // Hydrate username/avatar from the users array
+      const author = db.users.find((u) => u.id === c.authorId);
+      return {
+        ...c,
+        authorUsername: author?.username ?? c.authorUsername,
+        authorAvatarUrl: author?.avatarUrl ?? c.authorAvatarUrl,
+      };
+    })
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  void user; // suppress unused warning
+}
+
+export async function addComment(comment: {
+  id: string;
+  slug: string;
+  authorId: string;
+  body: string;
+  approved: boolean;
+  approvedAt: string | null;
+  articleType: string;
+}): Promise<PostComment> {
+  const db = readDb();
+  const author = db.users.find((u) => u.id === comment.authorId);
+  const newComment: PostComment = {
+    id: comment.id,
+    slug: comment.slug,
+    authorId: comment.authorId,
+    authorUsername: author?.username ?? "unknown",
+    authorAvatarUrl: author?.avatarUrl,
+    body: comment.body,
+    createdAt: new Date().toISOString(),
+    approved: comment.approved,
+    approvedAt: comment.approvedAt ?? undefined,
+  };
+  db.comments = [...(db.comments ?? []), newComment];
+  writeDb(db);
+  return newComment;
+}
+
+export async function approveStaleComments(): Promise<number> {
+  const db = readDb();
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  let count = 0;
+  db.comments = (db.comments ?? []).map((c) => {
+    if (!c.approved && c.createdAt <= twoHoursAgo) {
+      count++;
+      return { ...c, approved: true, approvedAt: new Date().toISOString() };
+    }
+    return c;
+  });
+  writeDb(db);
+  return count;
 }

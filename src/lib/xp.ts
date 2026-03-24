@@ -33,6 +33,14 @@ export type User = {
   updatedAt: string;
   xp: number;
   tasks: UserTask[];
+  /**
+   * Site role — controls what a user can publish and see.
+   *  reader      — default, can comment only
+   *  community   — can submit community articles
+   *  professional — can publish professional articles
+   *  admin       — full access
+   */
+  role?: "reader" | "community" | "professional" | "admin";
   /** Linked OAuth accounts */
   oauthAccounts?: OAuthAccount[];
   /** Avatar URL from OAuth provider */

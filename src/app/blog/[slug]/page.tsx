@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import PaywallGate from "@/components/PaywallGate";
+import CommentsSection from "@/components/CommentsSection";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -80,6 +81,20 @@ export default async function PostPage({ params }: Props) {
             </span>
             <span className="text-[var(--border)]">·</span>
             <span className="label-upper text-[var(--text-muted)]">{post.readingTime}</span>
+            {post.articleType && (
+              <>
+                <span className="text-[var(--border)]">·</span>
+                <span
+                  className={`label-upper px-2 py-0.5 text-[10px] border ${
+                    post.articleType === "professional"
+                      ? "border-[var(--border-strong)] text-[var(--foreground)]"
+                      : "border-[var(--border)] text-[var(--text-muted)]"
+                  }`}
+                >
+                  {post.articleType === "professional" ? "Professional" : "Community"}
+                </span>
+              </>
+            )}
           </div>
         </header>
 
@@ -116,6 +131,9 @@ export default async function PostPage({ params }: Props) {
             ← Back to all posts
           </Link>
         </div>
+
+        {/* Comments */}
+        <CommentsSection slug={post.slug} articleType={post.articleType} />
       </div>
     </div>
   );

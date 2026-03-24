@@ -9,6 +9,7 @@
 
 import type { User } from "@/lib/xp";
 import { TASK_CATALOGUE, xpToLevel } from "@/lib/xp";
+import type { PostComment } from "@/types/post";
 
 export type { User };
 export { TASK_CATALOGUE, xpToLevel };
@@ -68,3 +69,29 @@ export async function completeTask(
   return (await backend()).completeTask(userId, taskId);
 }
 
+// ---------------------------------------------------------------------------
+// Comments
+// ---------------------------------------------------------------------------
+
+export async function getComments(
+  slug: string,
+  currentUserId?: string
+): Promise<PostComment[]> {
+  return (await backend()).getComments(slug, currentUserId);
+}
+
+export async function addComment(comment: {
+  id: string;
+  slug: string;
+  authorId: string;
+  body: string;
+  approved: boolean;
+  approvedAt: string | null;
+  articleType: string;
+}): Promise<PostComment> {
+  return (await backend()).addComment(comment);
+}
+
+export async function approveStaleComments(): Promise<number> {
+  return (await backend()).approveStaleComments();
+}
