@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 const PUBLIC_PATHS = [
   "/coming-soon",
   "/api/unlock",
+  "/api/interest",   // interest / notify-me form — no password required
 ];
 
 export function proxy(req: NextRequest) {

@@ -17,3 +17,14 @@ CREATE TABLE IF NOT EXISTS users (
 -- (used by getUserByProvider)
 CREATE INDEX IF NOT EXISTS idx_users_oauth
   ON users USING gin ((data->'oauthAccounts'));
+
+-- ---------------------------------------------------------------------------
+-- Launch interest list
+-- Stores emails from visitors who want to be notified when the site launches.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS interest (
+  email      TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  notified   BOOLEAN     NOT NULL DEFAULT false
+);
