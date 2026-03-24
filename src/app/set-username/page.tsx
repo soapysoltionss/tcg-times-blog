@@ -54,7 +54,8 @@ export default function SetUsernamePage() {
     });
 
     if (res.ok) {
-      router.push("/profile");
+      // Full navigation so UserMenu re-mounts and fetches the updated session
+      window.location.href = "/profile";
     } else {
       const data = await res.json();
       setError(data.error ?? "Something went wrong.");
