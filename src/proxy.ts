@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Paths that are always public — the lock page itself, its API, and auth routes
+// Paths that are always public — the lock page itself and its API only.
+// Everything else (including /login and /register) requires the site password.
 const PUBLIC_PATHS = [
   "/coming-soon",
   "/api/unlock",
-  "/api/auth",
-  "/login",
-  "/register",
-  "/verify-email",
-  "/forgot-password",
-  "/set-username",
 ];
 
 export function proxy(req: NextRequest) {
