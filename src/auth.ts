@@ -119,25 +119,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
 
-  events: {
-    // Upsert the user into our DB as soon as OAuth succeeds
-    async signIn({ user, account }) {
-      if (!account || account.type !== "oauth") return;
-      const { upsertOAuthUser } = await import("@/lib/db");
-      try {
-        await upsertOAuthUser({
-          provider: account.provider,
-          providerAccountId: account.providerAccountId ?? "",
-          email: user.email ?? "",
-          name: user.name ?? "User",
-          image: user.image ?? undefined,
-        });
-      } catch (err) {
-        console.error("OAuth upsert error:", err);
-      }
-    },
-  },
-
   pages: {
     signIn: "/login",
     error: "/login",

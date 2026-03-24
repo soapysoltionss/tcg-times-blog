@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserByEmail, upsertOAuthUser } from "@/lib/db";
+import { upsertOAuthUser } from "@/lib/db";
 import { signSession, setSessionCookie } from "@/lib/session";
 
 /**
@@ -73,16 +73,16 @@ export async function GET(req: NextRequest) {
     }
 
     // ── 3. Upsert user into our DB ────────────────────────────────────────────
-    let dbUser = getUserByEmail(email);
-    if (!dbUser) {
-      dbUser = upsertOAuthUser({
-        provider,
-        providerAccountId,
-        email,
-        name,
-        image,
-      });
-    }
+    // Always upsert — this is the authoritative write point. events.signIn may
+    // have already written the user, but on Vercel each serverless invocation
+    // gets its own /tmp, so the two handlers may hit different instances.
+    const dbUser = upsertOAuthUser({
+      provider,
+      providerAccountId,
+      email,
+      name,
+      image,
+    });
 
     // ── 4. Mint our tcgt_session cookie and redirect ──────────────────────────
     const token = await signSession({ userId: dbUser.id, username: dbUser.username });
