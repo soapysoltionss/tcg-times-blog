@@ -8,6 +8,7 @@ type SessionUser = {
   username: string;
   firstName: string;
   xp: number;
+  avatarUrl?: string;
 };
 
 export default function UserMenu() {
@@ -69,8 +70,13 @@ export default function UserMenu() {
         className="flex items-center gap-2 hover:opacity-70 transition-opacity"
       >
         {/* Avatar circle */}
-        <div className="w-6 h-6 rounded-full bg-[var(--foreground)] text-[var(--background)] flex items-center justify-center text-[10px] font-bold shrink-0">
-          {user.firstName.charAt(0).toUpperCase()}
+        <div className="w-6 h-6 rounded-full bg-[var(--foreground)] text-[var(--background)] flex items-center justify-center text-[10px] font-bold shrink-0 overflow-hidden">
+          {user.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.avatarUrl} alt={user.username} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          ) : (
+            user.firstName.charAt(0).toUpperCase()
+          )}
         </div>
         <span className="label-upper text-[var(--foreground)] hidden sm:inline">
           @{user.username}

@@ -10,10 +10,10 @@
 
 import fs from "fs";
 import path from "path";
-import type { User, UserTask } from "@/lib/xp";
+import type { User, UserTask, OAuthAccount } from "@/lib/xp";
 import { TASK_CATALOGUE, xpToLevel } from "@/lib/xp";
 
-export type { User, UserTask };
+export type { User, UserTask, OAuthAccount };
 export { TASK_CATALOGUE, xpToLevel };
 
 type Db = { users: User[] };
@@ -60,6 +60,102 @@ export function getUserByUsername(username: string): User | undefined {
 export function getUserById(id: string): User | undefined {
   const db = readDb();
   return db.users.find((u) => u.id === id);
+}
+
+export function getUserByEmail(email: string): User | undefined {
+  const db = readDb();
+  return db.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+}
+
+/** Find a user who has a linked OAuth account for the given provider + account ID. */
+export function getUserByProvider(provider: string, providerAccountId: string): User | undefined {
+  const db = readDb();
+  return db.users.find((u) =>
+    u.oauthAccounts?.some(
+      (a) => a.provider === provider && a.providerAccountId === providerAccountId
+    )
+  );
+}
+
+/**
+ * Find-or-create a user from an OAuth sign-in.
+ * - If the providerAccountId is already linked → return that user.
+ * - If the email matches an existing user → link the new provider account.
+ * - Otherwise → create a brand new user with a generated username.
+ */
+export function upsertOAuthUser(opts: {
+  provider: string;
+  providerAccountId: string;
+  email: string;
+  name: string;
+  image?: string;
+}): User {
+  const { provider, providerAccountId, email, name, image } = opts;
+
+  // 1. Already linked to this OAuth account
+  let user = getUserByProvider(provider, providerAccountId);
+  if (user) {
+    // Refresh avatar
+    user.avatarUrl = image ?? user.avatarUrl;
+    user.updatedAt = new Date().toISOString();
+    saveUser(user);
+    return user;
+  }
+
+  // 2. Email matches an existing account → link provider
+  user = getUserByEmail(email);
+  if (user) {
+    user.oauthAccounts = user.oauthAccounts ?? [];
+    user.oauthAccounts.push({ provider, providerAccountId, email, name, image });
+    user.avatarUrl = user.avatarUrl ?? image;
+    user.updatedAt = new Date().toISOString();
+    saveUser(user);
+    return user;
+  }
+
+  // 3. Brand new user
+  const { v4: uuidv4 } = require("uuid") as { v4: () => string };
+  const now = new Date().toISOString();
+
+  // Generate a unique username from the display name
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "_")
+    .replace(/_+/g, "_")
+    .slice(0, 16);
+  let username = base;
+  let suffix = 1;
+  const db = readDb();
+  while (db.users.some((u) => u.username === username)) {
+    username = `${base}${suffix++}`;
+  }
+
+  const [firstName = name, ...rest] = name.split(" ");
+  const lastName = rest.join(" ") || "";
+
+  const newUser: User = {
+    id: uuidv4(),
+    username,
+    firstName,
+    lastName,
+    email,
+    passwordHash: "", // OAuth-only user has no password
+    createdAt: now,
+    updatedAt: now,
+    xp: 50,
+    avatarUrl: image,
+    oauthAccounts: [{ provider, providerAccountId, email, name, image }],
+    tasks: [
+      { id: "register", completedAt: now },
+      ...TASK_CATALOGUE.filter((t) => t.id !== "register").map((t) => ({
+        id: t.id,
+        completedAt: null,
+      })),
+    ],
+  };
+
+  saveUser(newUser);
+  return newUser;
 }
 
 export function saveUser(user: User): void {

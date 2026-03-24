@@ -12,17 +12,31 @@ export type UserTask = {
   completedAt: string | null;
 };
 
+/** A linked OAuth account (Google, Patreon, etc.) */
+export type OAuthAccount = {
+  provider: string;   // "google" | "patreon"
+  providerAccountId: string;
+  email?: string;
+  name?: string;
+  image?: string;
+};
+
 export type User = {
   id: string;
   username: string;
   firstName: string;
   lastName: string;
   email: string;
+  /** Bcrypt hash — empty string for OAuth-only users */
   passwordHash: string;
   createdAt: string;
   updatedAt: string;
   xp: number;
   tasks: UserTask[];
+  /** Linked OAuth accounts */
+  oauthAccounts?: OAuthAccount[];
+  /** Avatar URL from OAuth provider */
+  avatarUrl?: string;
 };
 
 // ---------------------------------------------------------------------------

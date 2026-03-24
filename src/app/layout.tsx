@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ThemeProvider from "@/components/ThemeProvider";
+import NextAuthProvider from "@/components/NextAuthProvider";
 import { siteConfig } from "@/config/site";
 
 const playfair = Playfair_Display({
@@ -52,11 +53,13 @@ export default function RootLayout({
       <body
         className={`${playfair.variable} ${dmSans.variable} antialiased min-h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)]`}
       >
-        <ThemeProvider>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </ThemeProvider>
+        <NextAuthProvider>
+          <ThemeProvider>
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </ThemeProvider>
+        </NextAuthProvider>
       </body>
     </html>
   );

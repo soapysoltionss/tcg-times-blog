@@ -13,7 +13,7 @@ export async function GET() {
     return NextResponse.json({ user: null });
   }
 
-  // Never send the password hash to the client
-  const { passwordHash: _, ...safe } = user;
+  // Never send the password hash or raw OAuth tokens to the client
+  const { passwordHash: _, oauthAccounts: __, ...safe } = user;
   return NextResponse.json({ user: safe });
 }
