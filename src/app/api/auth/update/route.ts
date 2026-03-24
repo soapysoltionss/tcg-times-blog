@@ -9,7 +9,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 
-  const user = getUserById(session.userId);
+  const user = await getUserById(session.userId);
   if (!user) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
@@ -44,13 +44,13 @@ export async function PATCH(req: NextRequest) {
   }
 
   user.updatedAt = new Date().toISOString();
-  saveUser(user);
+  await saveUser(user);
 
   // Check if profile is now complete → award XP
   if (user.firstName && user.lastName && user.email) {
-    completeTask(user.id, "complete_profile");
+    await completeTask(user.id, "complete_profile");
   }
 
-  const { passwordHash: _, ...safe } = getUserById(session.userId)!;
+  const { passwordHash: _, ...safe } = (await getUserById(session.userId))!;
   return NextResponse.json({ ok: true, user: safe });
 }

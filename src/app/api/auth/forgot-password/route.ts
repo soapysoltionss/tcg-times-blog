@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
   }
 
-  const user = getUserByUsername(username);
+  const user = await getUserByUsername(username);
   if (!user) {
     // Return the same message to avoid username enumeration
     return NextResponse.json({ ok: true });
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   user.passwordHash = await bcrypt.hash(newPassword, 12);
   user.updatedAt = new Date().toISOString();
-  saveUser(user);
+  await saveUser(user);
 
   return NextResponse.json({ ok: true });
 }

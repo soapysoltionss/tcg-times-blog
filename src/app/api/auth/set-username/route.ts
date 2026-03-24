@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 
-  const user = getUserById(session.userId);
+  const user = await getUserById(session.userId);
   if (!user) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Check uniqueness (case-insensitive), ignoring the user's current placeholder
-  const existing = getUserByUsername(raw);
+  const existing = await getUserByUsername(raw);
   if (existing && existing.id !== user.id) {
     return NextResponse.json({ error: "That username is already taken." }, { status: 409 });
   }
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   user.username = raw;
   user.needsUsername = false;
   user.updatedAt = new Date().toISOString();
-  saveUser(user);
+  await saveUser(user);
 
   // Re-sign session with the new username
   const token = await signSession({ userId: user.id, username: user.username });

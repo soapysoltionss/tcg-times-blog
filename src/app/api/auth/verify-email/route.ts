@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email and code are required." }, { status: 400 });
   }
 
-  const user = getUserByEmail(email);
+  const user = await getUserByEmail(email);
   if (!user) {
     return NextResponse.json({ error: "Account not found." }, { status: 404 });
   }
@@ -49,10 +49,10 @@ export async function POST(req: NextRequest) {
   user.verificationCode = undefined;
   user.verificationCodeExpiresAt = undefined;
   user.updatedAt = new Date().toISOString();
-  saveUser(user);
+  await saveUser(user);
 
   // Award register XP task
-  completeTask(user.id, "register");
+  await completeTask(user.id, "register");
 
   // Issue session cookie
   const token = await signSession({ userId: user.id, username: user.username });
@@ -69,7 +69,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Email is required." }, { status: 400 });
   }
 
-  const user = getUserByEmail(email);
+  const user = await getUserByEmail(email);
   if (!user) {
     return NextResponse.json({ error: "Account not found." }, { status: 404 });
   }
@@ -82,7 +82,7 @@ export async function PUT(req: NextRequest) {
   user.verificationCode = code;
   user.verificationCodeExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
   user.updatedAt = new Date().toISOString();
-  saveUser(user);
+  await saveUser(user);
 
   try {
     await sendVerificationEmail({ to: user.email, firstName: user.firstName, code });

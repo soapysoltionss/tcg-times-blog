@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
     // Always upsert — this is the authoritative write point. events.signIn may
     // have already written the user, but on Vercel each serverless invocation
     // gets its own /tmp, so the two handlers may hit different instances.
-    const dbUser = upsertOAuthUser({
+    const dbUser = await upsertOAuthUser({
       provider,
       providerAccountId,
       email,

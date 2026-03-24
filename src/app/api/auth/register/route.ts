@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
-import { readDb, saveUser, getUserByUsername, getUserByEmail, TASK_CATALOGUE } from "@/lib/db";
+import { saveUser, getUserByUsername, getUserByEmail, TASK_CATALOGUE } from "@/lib/db";
 import { sendVerificationEmail } from "@/lib/email";
 
 function generateCode(): string {
@@ -33,11 +33,11 @@ export async function POST(req: NextRequest) {
   }
 
   // --- Uniqueness checks ---
-  const existingUsername = getUserByUsername(username);
+  const existingUsername = await getUserByUsername(username);
   if (existingUsername) {
     return NextResponse.json({ error: "That username is already taken." }, { status: 409 });
   }
-  const existingEmail = getUserByEmail(email);
+  const existingEmail = await getUserByEmail(email);
   if (existingEmail) {
     return NextResponse.json(
       { error: "An account with that email already exists." },
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     tasks: TASK_CATALOGUE.map((t) => ({ id: t.id, completedAt: null })),
   };
 
-  saveUser(user);
+  await saveUser(user);
 
   // --- Send verification email ---
   try {
