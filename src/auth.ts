@@ -55,6 +55,14 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      // Explicitly set authorization URL to avoid OIDC discovery fetch at runtime
+      authorization: {
+        url: "https://accounts.google.com/o/oauth2/v2/auth",
+        params: {
+          scope: "openid email profile",
+          response_type: "code",
+        },
+      },
     })
   );
 }
@@ -75,8 +83,6 @@ if (process.env.PATREON_CLIENT_ID && process.env.PATREON_CLIENT_SECRET) {
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers,
   trustHost: true,
-  // NEXTAUTH_URL must match the canonical domain Vercel serves (www.tcgtimes.blog)
-  // Set AUTH_URL as override in case NEXTAUTH_URL is www but host header varies
   pages: {
     signIn: "/login",
     error: "/login",
