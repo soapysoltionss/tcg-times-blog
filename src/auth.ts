@@ -83,6 +83,39 @@ if (process.env.PATREON_CLIENT_ID && process.env.PATREON_CLIENT_SECRET) {
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers,
   trustHost: true,
+
+  callbacks: {
+    // After Google completes, bounce to /api/auth/complete which sets our tcgt_session cookie
+    async redirect({ url, baseUrl }) {
+      // Any post-signin redirect → send to our complete handler first
+      if (url.includes("/profile") || url === baseUrl || url === `${baseUrl}/`) {
+        return `${baseUrl}/api/auth/complete`;
+      }
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (url.startsWith(baseUrl)) return url;
+      return `${baseUrl}/api/auth/complete`;
+    },
+  },
+
+  events: {
+    // Upsert the user into our DB as soon as OAuth succeeds
+    async signIn({ user, account }) {
+      if (!account || account.type !== "oauth") return;
+      const { upsertOAuthUser } = await import("@/lib/db");
+      try {
+        await upsertOAuthUser({
+          provider: account.provider,
+          providerAccountId: account.providerAccountId ?? "",
+          email: user.email ?? "",
+          name: user.name ?? "User",
+          image: user.image ?? undefined,
+        });
+      } catch (err) {
+        console.error("OAuth upsert error:", err);
+      }
+    },
+  },
+
   pages: {
     signIn: "/login",
     error: "/login",
