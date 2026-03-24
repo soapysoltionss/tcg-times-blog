@@ -44,7 +44,10 @@ export async function GET(req: NextRequest) {
     hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
     nextauthUrl: process.env.NEXTAUTH_URL ?? "(not set)",
     nodeEnv: process.env.NODE_ENV,
-    // What the /api/auth/providers endpoint returns
-    callbackUrl: `${process.env.NEXTAUTH_URL}/api/auth/callback/google`,
+    // Actual host header arriving at the server
+    requestHost: req.headers.get("host"),
+    requestUrl: req.url,
+    // What Google callback URL NextAuth will use
+    expectedCallbackUrl: `${process.env.NEXTAUTH_URL}/api/auth/callback/google`,
   });
 }
