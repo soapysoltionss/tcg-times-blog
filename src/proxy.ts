@@ -9,6 +9,7 @@ const PUBLIC_PATHS = [
   "/register",
   "/verify-email",
   "/forgot-password",
+  "/set-username",
 ];
 
 export function proxy(req: NextRequest) {

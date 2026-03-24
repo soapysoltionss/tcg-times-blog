@@ -144,6 +144,8 @@ export function upsertOAuthUser(opts: {
     updatedAt: now,
     xp: 50,
     avatarUrl: image,
+    emailVerified: true, // OAuth email is pre-verified by the provider
+    needsUsername: true, // Prompt the user to choose a proper username
     oauthAccounts: [{ provider, providerAccountId, email, name, image }],
     tasks: [
       { id: "register", completedAt: now },

@@ -9,6 +9,7 @@ type SessionUser = {
   firstName: string;
   xp: number;
   avatarUrl?: string;
+  needsUsername?: boolean;
 };
 
 export default function UserMenu() {
@@ -79,7 +80,7 @@ export default function UserMenu() {
           )}
         </div>
         <span className="label-upper text-[var(--foreground)] hidden sm:inline">
-          @{user.username}
+          Welcome, @{user.username}
         </span>
         <span className="label-upper text-[var(--text-muted)] text-[9px] hidden sm:inline">
           Lv.{level}

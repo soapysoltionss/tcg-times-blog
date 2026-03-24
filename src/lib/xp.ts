@@ -42,6 +42,8 @@ export type User = {
   /** 6-digit code + expiry for email verification or password reset */
   verificationCode?: string;
   verificationCodeExpiresAt?: string;
+  /** True for brand-new OAuth users who haven't chosen a username yet */
+  needsUsername?: boolean;
 };
 
 // ---------------------------------------------------------------------------

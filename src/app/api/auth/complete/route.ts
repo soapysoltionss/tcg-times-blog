@@ -28,7 +28,9 @@ export async function GET(req: NextRequest) {
     }
 
     const token = await signSession({ userId: dbUser.id, username: dbUser.username });
-    const res = NextResponse.redirect(new URL("/profile", req.url));
+    // New OAuth users who haven't chosen a username yet go to /set-username first
+    const destination = dbUser.needsUsername ? "/set-username" : "/profile";
+    const res = NextResponse.redirect(new URL(destination, req.url));
     setSessionCookie(res, token);
     return res;
   } catch (err) {
