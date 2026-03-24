@@ -44,7 +44,28 @@ export default function LoginPage() {
 
   async function handleOAuth(provider: "google" | "patreon") {
     setOauthLoading(provider);
-    window.location.href = `/api/auth/signin/${provider}?callbackUrl=/profile`;
+    // NextAuth v5 requires a POST with CSRF token — fetch the token first, then submit
+    try {
+      const csrfRes = await fetch("/api/auth/csrf");
+      const { csrfToken } = await csrfRes.json();
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = `/api/auth/signin/${provider}`;
+      const csrfInput = document.createElement("input");
+      csrfInput.type = "hidden";
+      csrfInput.name = "csrfToken";
+      csrfInput.value = csrfToken;
+      form.appendChild(csrfInput);
+      const callbackInput = document.createElement("input");
+      callbackInput.type = "hidden";
+      callbackInput.name = "callbackUrl";
+      callbackInput.value = "/profile";
+      form.appendChild(callbackInput);
+      document.body.appendChild(form);
+      form.submit();
+    } catch {
+      setOauthLoading(null);
+    }
   }
 
   return (
