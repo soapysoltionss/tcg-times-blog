@@ -45,11 +45,12 @@ export default async function PostPage({ params }: Props) {
     notFound();
   }
 
-  // Resolve subscriber status server-side for the paywall gate
+  // Resolve subscriber status server-side.
+  // Always read from the DB — the JWT may be stale (minted before subscription
+  // was set). The DB is the single source of truth.
   const session = await getSession();
-  let isSubscriber = session?.isSubscriber ?? false;
-  if (!isSubscriber && session?.userId) {
-    // Double-check against the DB (session token may be stale)
+  let isSubscriber = false;
+  if (session?.userId) {
     const user = await getUserById(session.userId);
     isSubscriber =
       user?.subscription?.status === "active" ||

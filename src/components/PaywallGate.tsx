@@ -1,14 +1,31 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 type Props = {
   title: string;
-  /** If true, the gate is bypassed and nothing is rendered */
+  /** Server-side subscriber hint — may be stale; client will verify via /api/auth/me */
   isSubscriber?: boolean;
 };
 
-export default function PaywallGate({ title, isSubscriber }: Props) {
-  // Subscriber — no gate needed (full content already rendered by the page)
-  if (isSubscriber) return null;
+export default function PaywallGate({ title, isSubscriber: serverHint }: Props) {
+  // Start with whatever the server told us. If the server said "subscriber",
+  // trust it immediately. If not, double-check client-side via /api/auth/me
+  // so that stale cookies / CDN-cached pages never wrongly show the gate.
+  const [hidden, setHidden] = useState(serverHint === true);
+
+  useEffect(() => {
+    if (serverHint) return; // already hidden — no need to fetch
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then(({ isSubscriber }) => {
+        if (isSubscriber) setHidden(true);
+      })
+      .catch(() => {/* non-fatal — gate stays visible */});
+  }, [serverHint]);
+
+  if (hidden) return null;
 
   return (
     <div className="relative my-12">
