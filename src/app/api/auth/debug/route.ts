@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   if (searchParams.get("step") === "subscriber") {
     const session = await getSession();
     if (!session) {
-      return NextResponse.json({ session: null, note: "not logged in" });
+      return NextResponse.json({ session: null, note: "not logged in - no tcgt_session cookie found" });
     }
     const user = await getUserById(session.userId);
     return NextResponse.json({
@@ -27,6 +27,17 @@ export async function GET(req: NextRequest) {
         user?.subscription?.status === "active" ||
         user?.subscription?.status === "declined",
     });
+  }
+
+  // --- step=rawuser: dump raw DB user by username (no session needed) ---
+  if (searchParams.get("step") === "rawuser") {
+    const username = searchParams.get("u") ?? "tcgtimes";
+    const { getUserByUsername } = await import("@/lib/db");
+    const user = await getUserByUsername(username);
+    if (!user) return NextResponse.json({ error: "user not found", username });
+    // Omit password hash
+    const { passwordHash: _, ...safe } = user;
+    return NextResponse.json({ username, user: safe });
   }
 
   // --- step=signin: fetch the NextAuth signin endpoint and return what it does ---
