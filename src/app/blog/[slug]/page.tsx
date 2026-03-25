@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import PaywallGate from "@/components/PaywallGate";
 import CommentsSection from "@/components/CommentsSection";
+import { mdxComponents } from "@/components/MdxComponents";
 import { getSession } from "@/lib/session";
 import { getUserById } from "@/lib/db";
 
@@ -118,11 +119,14 @@ export default async function PostPage({ params }: Props) {
 
         {/* Content */}
         <article className="prose prose-lg max-w-none">
-          <MDXRemote source={
-            post.paywalled && post.freeContent && !isSubscriber
-              ? post.freeContent
-              : post.content
-          } />
+          <MDXRemote
+            source={
+              post.paywalled && post.freeContent && !isSubscriber
+                ? post.freeContent
+                : post.content
+            }
+            components={mdxComponents}
+          />
         </article>
 
         {/* Paywall gate */}
