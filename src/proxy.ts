@@ -8,7 +8,6 @@ const PUBLIC_PATHS = [
   "/api/interest",              // notify-me form
   "/api/comments/approve",      // Vercel Cron
   "/api/auth/patreon-webhook",  // Patreon server-to-server webhook
-  "/api/auth/debug",            // temporary diagnostic endpoint
 ];
 
 export function proxy(req: NextRequest) {
