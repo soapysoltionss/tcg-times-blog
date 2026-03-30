@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import type { Listing, ListingCondition } from "@/types/post";
 import CardAutocomplete from "@/components/CardAutocomplete";
 import type { AnyCardResult } from "@/components/CardAutocomplete";
 import FlipCard from "@/components/FlipCard";
 import type { FabCardPrinting } from "@/app/api/fab-cards/route";
+import type { JeuxProduct } from "@/lib/jeux";
 
 // ---------------------------------------------------------------------------
 // SetNameCombobox
@@ -238,6 +240,139 @@ function ListingCard({ listing }: { listing: Listing }) {
 }
 
 // ---------------------------------------------------------------------------
+// Jeux Kingdom listing card
+// ---------------------------------------------------------------------------
+
+function JeuxListingCard({ product }: { product: JeuxProduct }) {
+  const availableVariants = product.variants.filter((v) => v.available);
+  const hasStock = availableVariants.length > 0;
+
+  return (
+    <a
+      href={product.jeuxUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors bg-[var(--background)] flex flex-col"
+    >
+      {/* Image */}
+      <div className="aspect-[3/4] bg-[var(--muted)] overflow-hidden relative">
+        {product.imageUrl ? (
+          <Image
+            src={product.imageUrl}
+            alt={product.title}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="label-upper text-[var(--text-muted)] text-[10px]">No Image</span>
+          </div>
+        )}
+        <span className="absolute top-2 left-2 label-upper text-[10px] bg-amber-500 text-white px-2 py-0.5">
+          Jeux
+        </span>
+        {!hasStock && (
+          <span className="absolute top-2 right-2 label-upper text-[10px] bg-[var(--foreground)] text-[var(--background)] px-2 py-0.5 opacity-70">
+            Sold out
+          </span>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="p-4 flex flex-col gap-1.5 flex-1">
+        <p className="font-bold text-[var(--foreground)] leading-tight line-clamp-2 text-sm">
+          {product.title}
+        </p>
+        <p className="label-upper text-[var(--text-muted)] text-[10px]">{product.productType}</p>
+
+        {availableVariants.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {availableVariants.slice(0, 3).map((v) => (
+              <span
+                key={v.variantId}
+                className={`label-upper text-[10px] px-1.5 py-0.5 rounded-sm ${conditionBadge(v.condition as ListingCondition)}`}
+              >
+                {v.condition}
+              </span>
+            ))}
+            {availableVariants.length > 3 && (
+              <span className="label-upper text-[10px] text-[var(--text-muted)] px-1 py-0.5">
+                +{availableVariants.length - 3} more
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="mt-auto pt-3 flex items-end justify-between gap-2">
+          {product.lowestPriceSGD !== null ? (
+            <span className="text-xl font-black text-[var(--foreground)]" style={{ fontFamily: "var(--font-serif, serif)" }}>
+              S${(product.lowestPriceSGD / 100).toFixed(2)}
+            </span>
+          ) : (
+            <span className="text-sm text-[var(--text-muted)]">—</span>
+          )}
+          <span className="label-upper text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
+            Buy on Jeux →
+          </span>
+        </div>
+      </div>
+    </a>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Store source filter types
+// ---------------------------------------------------------------------------
+
+type StoreSource = "all" | "tcgtimes" | "jeux";
+
+const STORE_SOURCES: { value: StoreSource; label: string }[] = [
+  { value: "all", label: "All Stores" },
+  { value: "tcgtimes", label: "TCG Times Sellers" },
+  { value: "jeux", label: "🏪 Jeux Kingdom" },
+];
+
+// ---------------------------------------------------------------------------
+// Jeux credits badge (only visible when JEUX_SHOPIFY_ADMIN_TOKEN is set)
+// ---------------------------------------------------------------------------
+
+function JeuxCreditsBadge() {
+  const [data, setData] = useState<{ enabled: boolean; creditSGD?: number; found?: boolean } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/jeux/credits")
+      .then((r) => r.json())
+      .then(setData)
+      .catch(() => {});
+  }, []);
+
+  if (!data?.enabled) return null;
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-xs">
+      <span className="label-upper text-[11px] text-amber-700 dark:text-amber-300 font-semibold">
+        Jeux Credit
+      </span>
+      {data.found ? (
+        <span className="font-black text-amber-800 dark:text-amber-200">
+          S${((data.creditSGD ?? 0) / 100).toFixed(2)}
+        </span>
+      ) : (
+        <a
+          href="https://www.jeuxkingdom.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="label-upper text-[10px] text-amber-600 dark:text-amber-400 underline underline-offset-2 hover:opacity-70"
+        >
+          Link Jeux account ↗
+        </a>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Sell modal
 // ---------------------------------------------------------------------------
 
@@ -461,7 +596,9 @@ function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
 
 export default function MarketplacePage() {
   const [tab, setTab] = useState<"store" | "community">("store");
+  const [storeSource, setStoreSource] = useState<StoreSource>("all");
   const [listings, setListings] = useState<Listing[]>([]);
+  const [jeuxProducts, setJeuxProducts] = useState<JeuxProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [game, setGame] = useState("");
   const [card, setCard] = useState("");
@@ -475,17 +612,47 @@ export default function MarketplacePage() {
   }, []);
 
   const fetchListings = useCallback(async () => {
-    setLoading(true);
     const params = new URLSearchParams({ marketplace: tab });
     if (game) params.set("game", game);
     if (search) params.set("card", search);
     const res = await fetch(`/api/marketplace?${params}`);
     const data = await res.json();
     setListings(data.listings ?? []);
-    setLoading(false);
   }, [tab, game, search]);
 
-  useEffect(() => { fetchListings(); }, [fetchListings]);
+  const fetchJeuxProducts = useCallback(async () => {
+    if (tab !== "store") return;
+    const params = new URLSearchParams();
+    if (game) params.set("game", game);
+    if (search) params.set("query", search);
+    const res = await fetch(`/api/jeux/products?${params}`);
+    const data = await res.json();
+    setJeuxProducts(data.products ?? []);
+  }, [tab, game, search]);
+
+  useEffect(() => {
+    async function fetchAll() {
+      setLoading(true);
+      const needsTcgTimes = storeSource !== "jeux";
+      const needsJeux = tab === "store" && storeSource !== "tcgtimes";
+      await Promise.all([
+        needsTcgTimes ? fetchListings() : Promise.resolve(),
+        needsJeux ? fetchJeuxProducts() : Promise.resolve(),
+      ]);
+      setLoading(false);
+    }
+    fetchAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, game, search, storeSource]);
+
+  function handleTabChange(t: "store" | "community") {
+    setTab(t);
+    if (t === "community") setStoreSource("all");
+  }
+
+  const showJeux = tab === "store" && (storeSource === "all" || storeSource === "jeux");
+  const showTcgTimes = storeSource !== "jeux" || tab === "community";
+  const hasAnyResults = (showTcgTimes && listings.length > 0) || (showJeux && jeuxProducts.length > 0);
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-10 py-10">
@@ -497,19 +664,21 @@ export default function MarketplacePage() {
             Marketplace
           </h1>
         </div>
-        {isLoggedIn && (
-          <button
-            onClick={() => setShowSell(true)}
-            className="label-upper px-6 py-3 bg-[var(--foreground)] text-[var(--background)] hover:opacity-70 transition-opacity self-start sm:self-auto"
-          >
-            + List a Card
-          </button>
-        )}
-        {!isLoggedIn && (
-          <a href="/login" className="label-upper px-6 py-3 border border-[var(--border-strong)] text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors self-start sm:self-auto">
-            Sign in to sell →
-          </a>
-        )}
+        <div className="flex items-center gap-3 flex-wrap">
+          <JeuxCreditsBadge />
+          {isLoggedIn ? (
+            <button
+              onClick={() => setShowSell(true)}
+              className="label-upper px-6 py-3 bg-[var(--foreground)] text-[var(--background)] hover:opacity-70 transition-opacity self-start sm:self-auto"
+            >
+              + List a Card
+            </button>
+          ) : (
+            <a href="/login" className="label-upper px-6 py-3 border border-[var(--border-strong)] text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors self-start sm:self-auto">
+              Sign in to sell →
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -517,7 +686,7 @@ export default function MarketplacePage() {
         {(["store", "community"] as const).map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            onClick={() => handleTabChange(t)}
             className={`label-upper px-6 py-3 capitalize transition-colors ${
               tab === t
                 ? "border-b-2 border-[var(--border-strong)] text-[var(--foreground)] -mb-px"
@@ -528,6 +697,25 @@ export default function MarketplacePage() {
           </button>
         ))}
       </div>
+
+      {/* Store source filter — only on Store tab */}
+      {tab === "store" && (
+        <div className="flex flex-wrap gap-2 mb-5">
+          {STORE_SOURCES.map((s) => (
+            <button
+              key={s.value}
+              onClick={() => setStoreSource(s.value)}
+              className={`label-upper px-4 py-2 text-[11px] border transition-colors ${
+                storeSource === s.value
+                  ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
+                  : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Game filter tabs */}
       <div className="flex flex-wrap gap-2 mb-5">
@@ -546,13 +734,13 @@ export default function MarketplacePage() {
         ))}
       </div>
 
-      {/* Card search */}
+      {/* Card / product search */}
       <div className="flex mb-8 max-w-sm">
         <input
           value={card}
           onChange={(e) => setCard(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") setSearch(card); }}
-          placeholder="Search card name…"
+          placeholder="Search card or product name…"
           className="flex-1 border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--border-strong)] outline-none"
         />
         <button
@@ -568,16 +756,60 @@ export default function MarketplacePage() {
         <div className="flex justify-center py-20">
           <span className="w-6 h-6 border-2 border-[var(--border)] border-t-[var(--foreground)] rounded-full animate-spin" />
         </div>
-      ) : listings.length === 0 ? (
+      ) : !hasAnyResults ? (
         <div className="text-center py-20 border border-dashed border-[var(--border)]">
-          <p className="label-upper text-[var(--text-muted)] mb-2">No listings yet</p>
+          <p className="label-upper text-[var(--text-muted)] mb-2">No listings found</p>
           <p className="text-sm text-[var(--text-muted)]">
-            {tab === "store" ? "No store listings found." : "Be the first to list a card in the community marketplace."}
+            {tab === "store" ? "No store listings match your filters." : "Be the first to list a card in the community marketplace."}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {listings.map((l) => <ListingCard key={l.id} listing={l} />)}
+        <div className="space-y-10">
+          {/* Jeux Kingdom products */}
+          {showJeux && jeuxProducts.length > 0 && (
+            <div>
+              {storeSource === "all" && (
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="label-upper text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
+                    🏪 Jeux Kingdom
+                  </span>
+                  <span className="text-[10px] text-[var(--text-muted)]">
+                    {jeuxProducts.length} product{jeuxProducts.length !== 1 ? "s" : ""} · live stock · prices in SGD
+                  </span>
+                  <a
+                    href="https://www.jeuxkingdom.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="label-upper text-[10px] text-[var(--text-muted)] hover:text-[var(--foreground)] underline underline-offset-2 transition-colors ml-auto"
+                  >
+                    View full store ↗
+                  </a>
+                </div>
+              )}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {jeuxProducts.map((p) => <JeuxListingCard key={p.id} product={p} />)}
+              </div>
+            </div>
+          )}
+
+          {/* TCG Times listings */}
+          {showTcgTimes && listings.length > 0 && (
+            <div>
+              {storeSource === "all" && tab === "store" && (
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="label-upper text-[11px] text-[var(--text-muted)] font-semibold">
+                    TCG Times Sellers
+                  </span>
+                  <span className="text-[10px] text-[var(--text-muted)]">
+                    {listings.length} listing{listings.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {listings.map((l) => <ListingCard key={l.id} listing={l} />)}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

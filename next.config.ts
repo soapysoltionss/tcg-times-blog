@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "cdn.shopify.com",
+        pathname: "/**",
+      },
+    ],
+  },
   // Ensure auth/API routes and subscriber-gated pages are never cached by
   // Vercel's CDN or Cloudflare. Without this, Vercel adds
   // `cache-control: public, max-age=0` which allows Cloudflare to serve stale
