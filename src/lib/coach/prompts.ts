@@ -18,12 +18,29 @@ Classify the user's latest message into exactly one of these categories and resp
 - prices       (card prices, where to buy, budget, market values, product recommendations, cross-region deals)
 - matchup      (matchup strategy, sideboard choices, meta, specific opponent game plans)
 - general      (greetings, off-topic, unclear, or anything not fitting above)
+- offtopic     (anything unrelated to trading card games: coding, politics, science, personal advice, etc.)
+
+Respond with one word only. No explanation.`;
+
+// ---------------------------------------------------------------------------
+// Off-topic guard — fast Haiku check before the real specialist call
+// ---------------------------------------------------------------------------
+
+export const OFF_TOPIC_PROMPT = `You are a topic guard for a TCG (Trading Card Game) assistant.
+Determine whether the user's message is related to trading card games (including Flesh and Blood, Grand Archive, One Piece TCG, Magic: The Gathering, Pokémon, Yu-Gi-Oh!, or any other TCG).
+TCG-related topics include: card rules, deckbuilding, card prices, matchup strategy, collecting, tournaments, game mechanics, specific cards or heroes/leaders, or TCG community questions.
+Respond with exactly one word:
+- yes   (the message IS related to TCGs in any way)
+- no    (the message is NOT related to TCGs — e.g. coding help, cooking, politics, math, general knowledge, personal advice)
 
 Respond with one word only. No explanation.`;
 
 // ---------------------------------------------------------------------------
 // Specialist base prompts
 // ---------------------------------------------------------------------------
+
+/** Appended to every specialist prompt as a hard guardrail. */
+const TCG_ONLY_RULE = `\n\nIMPORTANT: You are strictly a TCG assistant. If a user asks about anything unrelated to trading card games (e.g. coding, cooking, politics, science, personal advice), politely decline and remind them you can only help with TCG topics.`;
 
 const BASE_PROMPTS: Record<AgentIntent, string> = {
   rules: `You are a precise TCG rules expert covering Flesh and Blood, Grand Archive, and One Piece Card Game.
@@ -63,5 +80,5 @@ If the question fits a specialist category, provide focused advice in that direc
  * Appends region context (and cross-region notes) when available.
  */
 export function buildSystemPrompt(intent: AgentIntent, region: RegionContext): string {
-  return BASE_PROMPTS[intent] + buildRegionSection(region);
+  return BASE_PROMPTS[intent] + TCG_ONLY_RULE + buildRegionSection(region);
 }

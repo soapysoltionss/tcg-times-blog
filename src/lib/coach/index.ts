@@ -8,7 +8,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { AgentIntent, CoachMessage, CoachResult, ModelChoice, RegionContext, TierLevel } from "./types";
-import { ROUTER_PROMPT, buildSystemPrompt } from "./prompts";
+import { ROUTER_PROMPT, OFF_TOPIC_PROMPT, buildSystemPrompt } from "./prompts";
 import { ROUTER_MODEL, MODEL_OPTIONS, TIER_LIMITS, resolveModel, effectiveModelChoice } from "./models";
 import { callClaude, callGPT, callGemini } from "./dispatch";
 
@@ -38,6 +38,31 @@ export async function classifyIntent(
 }
 
 // ---------------------------------------------------------------------------
+// Off-topic guard — Haiku check, ~$0.0003 per call, runs before the real call
+// Returns true if the message is NOT related to TCGs.
+// ---------------------------------------------------------------------------
+
+export async function isOffTopic(
+  anthropic: Anthropic,
+  userMessage: string
+): Promise<boolean> {
+  try {
+    const res = await anthropic.messages.create({
+      model: ROUTER_MODEL,
+      max_tokens: 5,
+      system: OFF_TOPIC_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+    });
+    const text =
+      res.content[0].type === "text" ? res.content[0].text.trim().toLowerCase() : "yes";
+    return text === "no";
+  } catch {
+    // If guard fails, allow through — don't block users on a guard error
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main coach entry point
 // ---------------------------------------------------------------------------
 
@@ -54,7 +79,23 @@ export async function runCoach(
   const latestUserMsg =
     [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
 
-  const [intent] = await Promise.all([classifyIntent(anthropicClient, latestUserMsg)]);
+  // Run off-topic guard and intent classifier in parallel (both use Haiku)
+  const [offTopic, intent] = await Promise.all([
+    isOffTopic(anthropicClient, latestUserMsg),
+    classifyIntent(anthropicClient, latestUserMsg),
+  ]);
+
+  // Reject non-TCG questions before spending tokens on the specialist call
+  if (offTopic) {
+    return {
+      reply:
+        "I'm a TCG-only assistant — I can help with Flesh and Blood, Grand Archive, One Piece TCG, and other card games. I can't help with that topic. Try asking about rules, deckbuilding, card prices, or matchup strategy!",
+      intent: "general",
+      model: ROUTER_MODEL,
+      provider: "Anthropic",
+    };
+  }
+
   const model = resolveModel(chosen, tier);
   const system = buildSystemPrompt(intent, region);
 
