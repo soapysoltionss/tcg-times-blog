@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getListings, createListing } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { getUserById } from "@/lib/db";
-import type { Listing, ListingCondition } from "@/types/post";
+import type { Listing, ListingCondition, ListingType } from "@/types/post";
 
 const VALID_CONDITIONS: ListingCondition[] = [
   "Near Mint",
@@ -12,17 +12,21 @@ const VALID_CONDITIONS: ListingCondition[] = [
   "Damaged",
 ];
 
-// GET /api/marketplace?marketplace=store|community&game=...&card=...
+const VALID_LISTING_TYPES: ListingType[] = ["card", "sealed"];
+
+// GET /api/marketplace?marketplace=store|community&game=...&card=...&listingType=card|sealed
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const marketplace = searchParams.get("marketplace") as "store" | "community" | null;
   const game = searchParams.get("game") ?? undefined;
   const cardName = searchParams.get("card") ?? undefined;
+  const listingType = searchParams.get("listingType") as ListingType | null;
 
   const listings = await getListings({
     marketplace: marketplace ?? undefined,
     game,
     cardName,
+    listingType: listingType ?? undefined,
   });
 
   return NextResponse.json({ listings });
@@ -47,19 +51,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { cardName, setName, game, condition, conditionNotes, priceCents, quantity, imageUrl, description } = body;
+  const { cardName, setName, game, condition, conditionNotes, priceCents, quantity, imageUrl, description, listingType } = body;
 
   if (!cardName || typeof cardName !== "string" || cardName.trim().length < 1) {
-    return NextResponse.json({ error: "Card name is required" }, { status: 400 });
-  }
-  if (!setName || typeof setName !== "string") {
-    return NextResponse.json({ error: "Set name is required" }, { status: 400 });
+    return NextResponse.json({ error: "Card/product name is required" }, { status: 400 });
   }
   if (!game || typeof game !== "string") {
     return NextResponse.json({ error: "Game is required" }, { status: 400 });
   }
-  if (!VALID_CONDITIONS.includes(condition as ListingCondition)) {
-    return NextResponse.json({ error: "Invalid condition" }, { status: 400 });
+  // For sealed products, set name and condition are optional
+  const resolvedListingType: ListingType =
+    VALID_LISTING_TYPES.includes(listingType as ListingType) ? (listingType as ListingType) : "card";
+
+  if (resolvedListingType === "card") {
+    if (!setName || typeof setName !== "string") {
+      return NextResponse.json({ error: "Set name is required for singles" }, { status: 400 });
+    }
+    if (!VALID_CONDITIONS.includes(condition as ListingCondition)) {
+      return NextResponse.json({ error: "Invalid condition" }, { status: 400 });
+    }
   }
   if (typeof priceCents !== "number" || priceCents < 1) {
     return NextResponse.json({ error: "Price must be at least 1 cent" }, { status: 400 });
@@ -77,10 +87,11 @@ export async function POST(req: NextRequest) {
     id: uuidv4(),
     sellerId: user.id,
     marketplace,
+    listingType: resolvedListingType,
     cardName: (cardName as string).trim(),
-    setName: (setName as string).trim(),
+    setName: typeof setName === "string" && setName.trim() ? setName.trim() : "Sealed Product",
     game: game as string,
-    condition: condition as ListingCondition,
+    condition: (resolvedListingType === "sealed" ? ("Near Mint" as ListingCondition) : condition) as ListingCondition,
     conditionNotes: typeof conditionNotes === "string" && conditionNotes.trim() ? conditionNotes.trim() : undefined,
     priceCents: priceCents as number,
     quantity: quantity as number,

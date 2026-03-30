@@ -58,6 +58,13 @@ export type ListingCondition =
   | "Damaged";
 
 /**
+ * Whether the listing is a single card or a sealed product
+ * (booster box, booster pack, starter deck, etc.).
+ * Defaults to "card" for all legacy listings.
+ */
+export type ListingType = "card" | "sealed";
+
+/**
  * A single card listing on the marketplace.
  * marketplace is derived from the seller's role:
  *   role=store → "store"
@@ -76,6 +83,11 @@ export type Listing = {
   sellerTotalSales?: number;
   /** "store" if seller has role=store, otherwise "community" */
   marketplace: "store" | "community";
+  /**
+   * Whether this is a single card or a sealed product.
+   * Defaults to "card" for legacy listings that predate this field.
+   */
+  listingType?: ListingType;
   cardName: string;
   setName: string;
   game: string;

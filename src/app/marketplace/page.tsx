@@ -133,6 +133,13 @@ const GAMES = [
   { value: "other", label: "Other" },
 ];
 
+type ProductTypeFilter = "" | "card" | "sealed";
+const PRODUCT_TYPES: { value: ProductTypeFilter; label: string }[] = [
+  { value: "", label: "All" },
+  { value: "card", label: "Singles" },
+  { value: "sealed", label: "Sealed" },
+];
+
 const CONDITIONS: ListingCondition[] = [
   "Near Mint",
   "Lightly Played",
@@ -183,6 +190,11 @@ function ListingCard({ listing }: { listing: Listing }) {
         {listing.marketplace === "store" && (
           <span className="absolute top-2 left-2 label-upper text-[10px] bg-[var(--foreground)] text-[var(--background)] px-2 py-0.5">
             Store
+          </span>
+        )}
+        {listing.listingType === "sealed" && (
+          <span className="absolute bottom-2 left-2 label-upper text-[10px] bg-purple-600 text-white px-2 py-0.5">
+            Sealed
           </span>
         )}
       </div>
@@ -272,6 +284,11 @@ function JeuxListingCard({ product }: { product: JeuxProduct }) {
         <span className="absolute top-2 left-2 label-upper text-[10px] bg-amber-500 text-white px-2 py-0.5">
           Jeux
         </span>
+        {product.listingType === "sealed" && (
+          <span className="absolute bottom-2 left-2 label-upper text-[10px] bg-purple-600 text-white px-2 py-0.5">
+            Sealed
+          </span>
+        )}
         {!hasStock && (
           <span className="absolute top-2 right-2 label-upper text-[10px] bg-[var(--foreground)] text-[var(--background)] px-2 py-0.5 opacity-70">
             Sold out
@@ -377,6 +394,7 @@ function JeuxCreditsBadge() {
 // ---------------------------------------------------------------------------
 
 function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [listingType, setListingType] = useState<"card" | "sealed">("card");
   const [cardName, setCardName] = useState("");
   const [setName, setSetName] = useState("");
   const [cardPrintings, setCardPrintings] = useState<FabCardPrinting[]>([]);
@@ -416,6 +434,7 @@ function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        listingType,
         cardName, setName, game, condition,
         conditionNotes: conditionNotes.trim() || undefined,
         priceCents: price,
@@ -441,24 +460,61 @@ function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
           <button onClick={onClose} className="label-upper text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors">✕</button>
         </div>
 
+        {/* Listing type toggle */}
+        <div className="flex gap-2 mb-5">
+          {(["card", "sealed"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => {
+                setListingType(t);
+                setCardName(""); setCardPrintings([]); setSetName("");
+                setImageUrl(""); setBackImageUrl(undefined); setPriceSuggestion(null);
+              }}
+              className={`label-upper px-4 py-2 text-[11px] border transition-colors flex-1 ${
+                listingType === t
+                  ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
+                  : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
+              }`}
+            >
+              {t === "card" ? "🃏 Single Card" : "📦 Sealed Product"}
+            </button>
+          ))}
+        </div>
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-          {/* Card name with autocomplete */}
+          {/* Card name — autocomplete for singles, plain text for sealed */}
           <div className="flex flex-col gap-1.5">
-            <span className="label-upper text-[10px] text-[var(--text-muted)]">Card Name *</span>
-            <CardAutocomplete
-              game={game as "flesh-and-blood" | "grand-archive" | "one-piece"}
-              value={cardName}
-              onChange={(v) => { setCardName(v); setPriceSuggestion(null); setCardPrintings([]); }}
-              onSelect={handleCardSelect}
-            />
-            <p className="text-[10px] text-[var(--text-muted)]">
-              Search to load set options from the card database
-            </p>
+            <span className="label-upper text-[10px] text-[var(--text-muted)]">
+              {listingType === "card" ? "Card Name *" : "Product Name *"}
+            </span>
+            {listingType === "card" ? (
+              <>
+                <CardAutocomplete
+                  game={game as "flesh-and-blood" | "grand-archive" | "one-piece"}
+                  value={cardName}
+                  onChange={(v) => { setCardName(v); setPriceSuggestion(null); setCardPrintings([]); }}
+                  onSelect={handleCardSelect}
+                />
+                <p className="text-[10px] text-[var(--text-muted)]">
+                  Search to load set options from the card database
+                </p>
+              </>
+            ) : (
+              <input
+                type="text"
+                value={cardName}
+                onChange={(e) => setCardName(e.target.value)}
+                required
+                placeholder="e.g. Monarch Booster Box, Rhinar Blitz Deck…"
+                className="border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--border-strong)] outline-none"
+              />
+            )}
           </div>
 
-          {/* Card preview when image is filled */}
-          {imageUrl && (
+          {/* Card preview — singles only */}
+          {listingType === "card" && imageUrl && (
             <div className="flex flex-col items-center gap-2 p-4 border border-[var(--border)] bg-[var(--muted)]">
               <FlipCard
                 frontSrc={imageUrl}
@@ -480,14 +536,17 @@ function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
             </div>
           )}
 
-          <div className="flex flex-col gap-1.5">
-            <span className="label-upper text-[10px] text-[var(--text-muted)]">Set Name *</span>
-            <SetNameCombobox
-              value={setName}
-              printings={cardPrintings}
-              onChange={(sn, img, back) => { setSetName(sn); if (img) setImageUrl(img); setBackImageUrl(back); }}
-            />
-          </div>
+          {/* Set name — only for singles */}
+          {listingType === "card" && (
+            <div className="flex flex-col gap-1.5">
+              <span className="label-upper text-[10px] text-[var(--text-muted)]">Set Name *</span>
+              <SetNameCombobox
+                value={setName}
+                printings={cardPrintings}
+                onChange={(sn, img, back) => { setSetName(sn); if (img) setImageUrl(img); setBackImageUrl(back); }}
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <label className="flex flex-col gap-1.5">
@@ -495,7 +554,6 @@ function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
               <select
                 value={game} onChange={(e) => {
                   setGame(e.target.value);
-                  // Clear card data when switching games so old results don't carry over
                   setCardName("");
                   setCardPrintings([]);
                   setSetName("");
@@ -509,40 +567,52 @@ function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
               </select>
             </label>
 
-            <label className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <span className="label-upper text-[10px] text-[var(--text-muted)]">Condition *</span>
-                <a
-                  href="/tools/condition-guide"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="label-upper text-[10px] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors underline underline-offset-2"
+            {/* Condition — singles only */}
+            {listingType === "card" ? (
+              <label className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="label-upper text-[10px] text-[var(--text-muted)]">Condition *</span>
+                  <a
+                    href="/tools/condition-guide"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="label-upper text-[10px] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors underline underline-offset-2"
+                  >
+                    Guide ↗
+                  </a>
+                </div>
+                <select
+                  value={condition} onChange={(e) => setCondition(e.target.value as ListingCondition)}
+                  className="border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--border-strong)] outline-none"
                 >
-                  Guide ↗
-                </a>
+                  {CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </label>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                <span className="label-upper text-[10px] text-[var(--text-muted)]">Sealed Condition</span>
+                <div className="border border-[var(--border)] bg-[var(--muted)] px-3 py-2 text-sm text-[var(--text-muted)]">
+                  Factory Sealed / New
+                </div>
               </div>
-              <select
-                value={condition} onChange={(e) => setCondition(e.target.value as ListingCondition)}
-                className="border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--border-strong)] outline-none"
-              >
-                {CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </label>
+            )}
           </div>
 
-          {/* Condition notes */}
-          <label className="flex flex-col gap-1.5">
-            <span className="label-upper text-[10px] text-[var(--text-muted)]">Condition Notes <span className="opacity-50">(optional)</span></span>
-            <input
-              type="text"
-              value={conditionNotes}
-              onChange={(e) => setConditionNotes(e.target.value)}
-              placeholder="e.g. minor edge wear on top-right corner"
-              maxLength={200}
-              className="border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--border-strong)] outline-none"
-            />
-            <p className="text-[10px] text-[var(--text-muted)]">Describe any specific flaws so buyers know exactly what to expect.</p>
-          </label>
+          {/* Condition notes — singles only */}
+          {listingType === "card" && (
+            <label className="flex flex-col gap-1.5">
+              <span className="label-upper text-[10px] text-[var(--text-muted)]">Condition Notes <span className="opacity-50">(optional)</span></span>
+              <input
+                type="text"
+                value={conditionNotes}
+                onChange={(e) => setConditionNotes(e.target.value)}
+                placeholder="e.g. minor edge wear on top-right corner"
+                maxLength={200}
+                className="border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--border-strong)] outline-none"
+              />
+              <p className="text-[10px] text-[var(--text-muted)]">Describe any specific flaws so buyers know exactly what to expect.</p>
+            </label>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <label className="flex flex-col gap-1.5">
@@ -597,6 +667,7 @@ function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
 export default function MarketplacePage() {
   const [tab, setTab] = useState<"store" | "community">("store");
   const [storeSource, setStoreSource] = useState<StoreSource>("all");
+  const [productType, setProductType] = useState<ProductTypeFilter>("");
   const [listings, setListings] = useState<Listing[]>([]);
   const [jeuxProducts, setJeuxProducts] = useState<JeuxProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -615,20 +686,22 @@ export default function MarketplacePage() {
     const params = new URLSearchParams({ marketplace: tab });
     if (game) params.set("game", game);
     if (search) params.set("card", search);
+    if (productType) params.set("listingType", productType);
     const res = await fetch(`/api/marketplace?${params}`);
     const data = await res.json();
     setListings(data.listings ?? []);
-  }, [tab, game, search]);
+  }, [tab, game, search, productType]);
 
   const fetchJeuxProducts = useCallback(async () => {
     if (tab !== "store") return;
     const params = new URLSearchParams();
     if (game) params.set("game", game);
     if (search) params.set("query", search);
+    if (productType) params.set("listingType", productType);
     const res = await fetch(`/api/jeux/products?${params}`);
     const data = await res.json();
     setJeuxProducts(data.products ?? []);
-  }, [tab, game, search]);
+  }, [tab, game, search, productType]);
 
   useEffect(() => {
     async function fetchAll() {
@@ -643,7 +716,7 @@ export default function MarketplacePage() {
     }
     fetchAll();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, game, search, storeSource]);
+  }, [tab, game, search, storeSource, productType]);
 
   function handleTabChange(t: "store" | "community") {
     setTab(t);
@@ -716,6 +789,23 @@ export default function MarketplacePage() {
           ))}
         </div>
       )}
+
+      {/* Product type filter — both tabs */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {PRODUCT_TYPES.map((pt) => (
+          <button
+            key={pt.value}
+            onClick={() => setProductType(pt.value)}
+            className={`label-upper px-4 py-2 text-[11px] border transition-colors ${
+              productType === pt.value
+                ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
+                : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
+            }`}
+          >
+            {pt.label === "All" ? "All Types" : pt.label}
+          </button>
+        ))}
+      </div>
 
       {/* Game filter tabs */}
       <div className="flex flex-wrap gap-2 mb-5">

@@ -21,7 +21,7 @@
 import { neon } from "@neondatabase/serverless";
 import type { User } from "@/lib/xp";
 import { TASK_CATALOGUE, xpToLevel } from "@/lib/xp";
-import type { PostComment, Listing, PostFrontmatter, Message, MessageThread, Dispute, DisputeStatus } from "@/types/post";
+import type { PostComment, Listing, ListingType, PostFrontmatter, Message, MessageThread, Dispute, DisputeStatus } from "@/types/post";
 import readingTime from "reading-time";
 
 export type { User };
@@ -331,6 +331,7 @@ function rowToListing(row: Record<string, unknown>): Listing {
     sellerIsVerified: (row.seller_is_verified as boolean) ?? false,
     sellerTotalSales: (row.seller_total_sales as number) ?? 0,
     marketplace:      row.marketplace as "store" | "community",
+    listingType:      (row.listing_type as ListingType | undefined) ?? "card",
     cardName:         row.card_name as string,
     setName:          row.set_name as string,
     game:             row.game as string,
@@ -351,6 +352,7 @@ export async function getListings(opts?: {
   cardName?: string;
   sellerId?: string;
   includeSold?: boolean;
+  listingType?: ListingType;
 }): Promise<Listing[]> {
   const db = sql();
   const marketplace = opts?.marketplace ?? null;
@@ -358,6 +360,7 @@ export async function getListings(opts?: {
   const cardName = opts?.cardName ?? null;
   const sellerId = opts?.sellerId ?? null;
   const includeSold = opts?.includeSold ?? false;
+  const listingType = opts?.listingType ?? null;
 
   const rows = await db`
     SELECT
@@ -375,6 +378,7 @@ export async function getListings(opts?: {
         WHERE s.seller_id = l.seller_id AND s.sold = true
       ) AS seller_total_sales,
       l.marketplace,
+      l.listing_type,
       l.card_name,
       l.set_name,
       l.game,
@@ -392,6 +396,7 @@ export async function getListings(opts?: {
       AND (${game}::text IS NULL OR l.game = ${game})
       AND (${cardName}::text IS NULL OR lower(l.card_name) LIKE '%' || lower(${cardName}) || '%')
       AND (${sellerId}::text IS NULL OR l.seller_id = ${sellerId})
+      AND (${listingType}::text IS NULL OR COALESCE(l.listing_type, 'card') = ${listingType})
       AND (${includeSold} OR l.sold = false)
     ORDER BY l.created_at DESC
   `;
@@ -416,6 +421,7 @@ export async function getListingById(id: string): Promise<Listing | undefined> {
         WHERE s.seller_id = l.seller_id AND s.sold = true
       ) AS seller_total_sales,
       l.marketplace,
+      l.listing_type,
       l.card_name,
       l.set_name,
       l.game,
@@ -439,12 +445,13 @@ export async function createListing(listing: Omit<Listing, "sellerUsername" | "s
   const db = sql();
   await db`
     INSERT INTO listings
-      (id, seller_id, marketplace, card_name, set_name, game, condition, condition_notes,
+      (id, seller_id, marketplace, listing_type, card_name, set_name, game, condition, condition_notes,
        price_cents, quantity, image_url, description, sold)
     VALUES (
       ${listing.id},
       ${listing.sellerId},
       ${listing.marketplace},
+      ${listing.listingType ?? "card"},
       ${listing.cardName},
       ${listing.setName},
       ${listing.game},

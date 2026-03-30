@@ -81,6 +81,8 @@ export type JeuxProduct = {
   handle: string;
   game: string; // normalised game slug
   productType: string;
+  /** "card" for singles, "sealed" for boxes/packs/decks */
+  listingType: "card" | "sealed";
   tags: string[];
   imageUrl: string | null;
   variants: JeuxVariant[];
@@ -117,6 +119,16 @@ function normaliseGame(vendor: string, productType: string): string {
 // Normalise a raw Shopify product → JeuxProduct
 // ---------------------------------------------------------------------------
 
+// Sealed product detection — matches common Shopify product_type values
+const SEALED_KEYWORDS = ["sealed", "booster", "box", "pack", "deck", "bundle", "case", "collection", "display"];
+
+function isSealedProduct(productType: string, tags: string[]): boolean {
+  const pt = productType.toLowerCase();
+  if (SEALED_KEYWORDS.some((kw) => pt.includes(kw))) return true;
+  const tagStr = tags.join(" ").toLowerCase();
+  return SEALED_KEYWORDS.some((kw) => tagStr.includes(kw));
+}
+
 function normaliseProduct(p: ShopifyProduct): JeuxProduct {
   const variants: JeuxVariant[] = p.variants.map((v) => ({
     variantId: v.id,
@@ -138,6 +150,7 @@ function normaliseProduct(p: ShopifyProduct): JeuxProduct {
     handle: p.handle,
     game: normaliseGame(p.vendor, p.product_type),
     productType: p.product_type,
+    listingType: isSealedProduct(p.product_type, p.tags) ? "sealed" : "card",
     tags: p.tags,
     imageUrl: p.images[0]?.src ?? null,
     variants,
@@ -162,8 +175,9 @@ export async function getJeuxProducts(opts: {
   collection?: string;
   page?: number;
   revalidate?: number;
+  listingType?: "card" | "sealed";
 } = {}): Promise<JeuxProduct[]> {
-  const { game, query, collection, page = 1, revalidate = 300 } = opts;
+  const { game, query, collection, page = 1, revalidate = 300, listingType } = opts;
 
   // Shopify supports filtering by product_type or collection in the URL
   const base = collection
@@ -194,6 +208,11 @@ export async function getJeuxProducts(opts: {
   if (query) {
     const q = query.toLowerCase();
     products = products.filter((p) => p.title.toLowerCase().includes(q));
+  }
+
+  // Client-side listing type filter
+  if (listingType) {
+    products = products.filter((p) => p.listingType === listingType);
   }
 
   return products;

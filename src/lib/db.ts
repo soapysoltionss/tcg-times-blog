@@ -9,7 +9,7 @@
 
 import type { User } from "@/lib/xp";
 import { TASK_CATALOGUE, xpToLevel } from "@/lib/xp";
-import type { PostComment, Listing, PostFrontmatter, Message, MessageThread, Dispute, DisputeStatus } from "@/types/post";
+import type { PostComment, Listing, ListingType, PostFrontmatter, Message, MessageThread, Dispute, DisputeStatus } from "@/types/post";
 import type { DbPost, DbPostMeta } from "@/lib/db-neon";
 
 export type { User };
@@ -107,6 +107,7 @@ export async function getListings(opts?: {
   cardName?: string;
   sellerId?: string;
   includeSold?: boolean;
+  listingType?: ListingType;
 }): Promise<Listing[]> {
   return (await backend()).getListings(opts);
 }

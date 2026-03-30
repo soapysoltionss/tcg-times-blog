@@ -19,9 +19,14 @@ export async function GET(req: NextRequest) {
   const game = searchParams.get("game") ?? undefined;
   const query = searchParams.get("query") ?? undefined;
   const page = parseInt(searchParams.get("page") ?? "1", 10);
+  const listingTypeParam = searchParams.get("listingType");
+  const listingType =
+    listingTypeParam === "card" || listingTypeParam === "sealed"
+      ? (listingTypeParam as "card" | "sealed")
+      : undefined;
 
   try {
-    const products = await getJeuxProducts({ game, query, page, revalidate: 300 });
+    const products = await getJeuxProducts({ game, query, page, revalidate: 300, listingType });
     return NextResponse.json(
       { products, source: "jeuxkingdom.com" },
       {

@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS listings (
   id              TEXT        PRIMARY KEY,
   seller_id       TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   marketplace     TEXT        NOT NULL DEFAULT 'community', -- 'store' | 'community'
+  listing_type    TEXT        NOT NULL DEFAULT 'card',      -- 'card' | 'sealed'
   card_name       TEXT        NOT NULL,
   set_name        TEXT        NOT NULL,
   game            TEXT        NOT NULL,
@@ -86,6 +87,9 @@ CREATE INDEX IF NOT EXISTS idx_listings_marketplace ON listings (marketplace);
 CREATE INDEX IF NOT EXISTS idx_listings_game        ON listings (game);
 CREATE INDEX IF NOT EXISTS idx_listings_card        ON listings (lower(card_name));
 CREATE INDEX IF NOT EXISTS idx_listings_seller      ON listings (seller_id);
+
+-- Migration: add listing_type column to existing tables (run once on live DB)
+-- ALTER TABLE listings ADD COLUMN IF NOT EXISTS listing_type TEXT NOT NULL DEFAULT 'card';
 
 -- ---------------------------------------------------------------------------
 -- Blog posts
