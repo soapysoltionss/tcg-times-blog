@@ -50,7 +50,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   // Resolve the post to determine article type
   let articleType: "community" | "professional" = "community";
   try {
-    const post = getPostBySlug(slug);
+    const post = await getPostBySlug(slug);
     if (post.articleType === "professional") articleType = "professional";
   } catch {
     // Slug not found — 404

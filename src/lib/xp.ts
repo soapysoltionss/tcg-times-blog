@@ -33,6 +33,13 @@ export type Subscription = {
   /** Human-readable tier name e.g. "Monthly" */
   tierName: string;
   /**
+   * Numeric tier level — used to gate content per tier.
+   *  1 = Monthly (base subscriber access)
+   *  2 = Annual  (higher tier — same content but could gate premium extras)
+   * Default: 1 for any unrecognised tier.
+   */
+  tierLevel: number;
+  /**
    * active   — currently paying, has access
    * declined — payment failed, grace period
    * cancelled — cancelled, access until currentPeriodEnd
@@ -62,9 +69,10 @@ export type User = {
    *  reader      — default, can comment only
    *  community   — can submit community articles
    *  professional — can publish professional articles
+   *  store       — store account, listings go to store marketplace
    *  admin       — full access
    */
-  role?: "reader" | "community" | "professional" | "admin";
+  role?: "reader" | "community" | "professional" | "store" | "admin";
   /** Linked OAuth accounts */
   oauthAccounts?: OAuthAccount[];
   /** Avatar URL from OAuth provider */
@@ -78,6 +86,26 @@ export type User = {
   needsUsername?: boolean;
   /** Patreon subscription — set when the user connects Patreon, synced via webhook */
   subscription?: Subscription;
+  /**
+   * Admin-verified seller — set by an admin to indicate the seller has been
+   * manually vetted (identity verified, known store, etc.).
+   * Shows a ✦ Verified badge on listings and the seller's profile.
+   */
+  verifiedSeller?: boolean;
+  /**
+   * ISO 3166-1 alpha-2 country code representing the player's primary region.
+   * e.g. "SG" = Singapore, "US" = United States, "JP" = Japan, "AU" = Australia
+   * Set on registration or profile update. Used to localise AI coaching advice,
+   * currency references, and cross-region marketplace insights.
+   */
+  region?: string;
+  /**
+   * For store accounts only: additional regions the store operates in.
+   * Empty or undefined = single-region store.
+   * Set to ["GLOBAL"] to indicate a worldwide online store with no regional restriction.
+   * e.g. ["SG", "MY"] = operates in both Singapore and Malaysia
+   */
+  additionalRegions?: string[];
 };
 
 // ---------------------------------------------------------------------------
@@ -134,6 +162,13 @@ export const TASK_CATALOGUE: TaskDefinition[] = [
     description: "Unlock premium content.",
     xpReward: 150,
     icon: "⭐",
+  },
+  {
+    id: "sale_completed",
+    label: "Complete a sale",
+    description: "Sell a card on the TCG Times marketplace.",
+    xpReward: 75,
+    icon: "🤝",
   },
 ];
 

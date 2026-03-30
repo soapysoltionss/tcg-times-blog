@@ -14,6 +14,15 @@ export type SessionPayload = {
   username: string;
   /** True when user has an active or declined (grace-period) Patreon subscription */
   isSubscriber?: boolean;
+  /** Patreon tier name, e.g. "Monthly" or "Annual" */
+  tierName?: string;
+  /** Numeric tier level: 1 = Starter, 2 = Basic, 3 = Pro */
+  tierLevel?: number;
+  /**
+   * ISO 3166-1 alpha-2 country code from user profile.
+   * e.g. "SG", "US", "JP", "AU". Used to localise AI coaching responses.
+   */
+  regionCode?: string;
 };
 
 export async function signSession(payload: SessionPayload): Promise<string> {

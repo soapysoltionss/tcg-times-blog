@@ -1,71 +1,91 @@
-import fs from "fs";
-import path from "path";
-import matter from "gray-matter";
-import readingTime from "reading-time";
-import { Post, PostMeta, PostFrontmatter } from "@/types/post";
+/**
+ * Public post API — SERVER ONLY.
+ *
+ * All reads go through the database (Neon on prod, MDX files on local dev).
+ * The MDX content string is returned as-is; callers pass it to MDXRemote.
+ *
+ * Types re-exported from db so callers don't need to import from two places.
+ */
+import { unstable_cache } from "next/cache";
+import {
+  getDbPostBySlug,
+  getAllDbPosts,
+  getAllDbPostSlugs,
+  getDbPostsByCategory,
+  getFeaturedDbPosts,
+  getPinnedDbPosts,
+  upsertPost,
+  deletePost,
+} from "@/lib/db";
 
-const postsDirectory = path.join(process.cwd(), "content/posts");
+export type { DbPost as Post, DbPostMeta as PostMeta } from "@/lib/db";
 
-function ensurePostsDir() {
-  if (!fs.existsSync(postsDirectory)) {
-    fs.mkdirSync(postsDirectory, { recursive: true });
-  }
+// ---------------------------------------------------------------------------
+// Cached listing queries — revalidate every 60 s
+// ---------------------------------------------------------------------------
+
+const cachedGetAllPosts = unstable_cache(
+  () => getAllDbPosts(),
+  ["all-posts"],
+  { revalidate: 60, tags: ["posts"] },
+);
+
+const cachedGetAllPostSlugs = unstable_cache(
+  () => getAllDbPostSlugs(),
+  ["all-post-slugs"],
+  { revalidate: 60, tags: ["posts"] },
+);
+
+const cachedGetPostsByCategory = unstable_cache(
+  (category: string) => getDbPostsByCategory(category),
+  ["posts-by-category"],
+  { revalidate: 60, tags: ["posts"] },
+);
+
+const cachedGetPinnedPosts = unstable_cache(
+  (category?: string) => getPinnedDbPosts(category),
+  ["pinned-posts"],
+  { revalidate: 60, tags: ["posts"] },
+);
+
+const cachedGetFeaturedPosts = unstable_cache(
+  (limit: number) => getFeaturedDbPosts(limit),
+  ["featured-posts"],
+  { revalidate: 60, tags: ["posts"] },
+);
+
+// ---------------------------------------------------------------------------
+// Read helpers (async — matches the DB backend)
+// ---------------------------------------------------------------------------
+
+export async function getPostBySlug(slug: string) {
+  const post = await getDbPostBySlug(slug);
+  if (!post) throw new Error(`Post not found: ${slug}`);
+  return post;
 }
 
-export function getAllPostSlugs(): string[] {
-  ensurePostsDir();
-  return fs
-    .readdirSync(postsDirectory)
-    .filter((f) => f.endsWith(".mdx") || f.endsWith(".md"))
-    .map((f) => f.replace(/\.mdx?$/, ""));
+export async function getAllPosts() {
+  return cachedGetAllPosts();
 }
 
-export function getPostBySlug(slug: string): Post {
-  ensurePostsDir();
-  const fullPath =
-    fs.existsSync(path.join(postsDirectory, `${slug}.mdx`))
-      ? path.join(postsDirectory, `${slug}.mdx`)
-      : path.join(postsDirectory, `${slug}.md`);
-
-  const raw = fs.readFileSync(fullPath, "utf8");
-  const { data, content } = matter(raw);
-  const fm = data as PostFrontmatter;
-  const rt = readingTime(content);
-
-  const PAYWALL_MARKER = "PAYWALL_BREAK";
-  const markerIndex = content.indexOf(PAYWALL_MARKER);
-  const freeContent =
-    fm.paywalled && markerIndex !== -1
-      ? content.slice(0, markerIndex).trim()
-      : undefined;
-
-  return {
-    ...fm,
-    slug,
-    content,
-    freeContent,
-    readingTime: rt.text,
-    tags: fm.tags ?? [],
-  };
+export async function getAllPostSlugs() {
+  return cachedGetAllPostSlugs();
 }
 
-export function getAllPosts(): PostMeta[] {
-  return getAllPostSlugs()
-    .map((slug) => {
-      const post = getPostBySlug(slug);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { content, ...meta } = post;
-      return meta;
-    })
-    .sort((a, b) => (a.date < b.date ? 1 : -1));
+export async function getPostsByCategory(category: string) {
+  return cachedGetPostsByCategory(category);
 }
 
-export function getPostsByCategory(category: string): PostMeta[] {
-  return getAllPosts().filter((p) => p.category === category);
+export async function getPinnedPosts(category?: string) {
+  return cachedGetPinnedPosts(category);
 }
 
-export function getFeaturedPosts(limit = 3): PostMeta[] {
-  const all = getAllPosts();
-  const featured = all.filter((p) => p.featured);
-  return featured.length > 0 ? featured.slice(0, limit) : all.slice(0, limit);
+export async function getFeaturedPosts(limit = 3) {
+  return cachedGetFeaturedPosts(limit);
 }
+
+// ---------------------------------------------------------------------------
+// Write helpers
+// ---------------------------------------------------------------------------
+
+export { upsertPost, deletePost };

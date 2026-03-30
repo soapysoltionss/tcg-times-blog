@@ -9,13 +9,16 @@
 
 import fs from "fs";
 import path from "path";
+import matter from "gray-matter";
+import readingTime from "reading-time";
 import type { User } from "@/lib/xp";
 import { TASK_CATALOGUE, xpToLevel } from "@/lib/xp";
-import type { PostComment } from "@/types/post";
+import type { PostComment, Listing, PostFrontmatter, Message, MessageThread, Dispute, DisputeStatus } from "@/types/post";
+import type { DbPost, DbPostMeta } from "@/lib/db-neon";
 
 export { TASK_CATALOGUE, xpToLevel };
 
-type Db = { users: User[]; comments: PostComment[] };
+type Db = { users: User[]; comments: PostComment[]; listings: Listing[] };
 
 function dbPath(): string {
   return path.join(process.cwd(), "data", "users.json");
@@ -25,7 +28,7 @@ function readDb(): Db {
   try {
     return JSON.parse(fs.readFileSync(dbPath(), "utf-8")) as Db;
   } catch {
-    return { users: [], comments: [] };
+    return { users: [], comments: [], listings: [] };
   }
 }
 
@@ -254,4 +257,197 @@ export async function approveStaleComments(): Promise<number> {
   });
   writeDb(db);
   return count;
+}
+
+// ---------------------------------------------------------------------------
+// Marketplace listings (local dev — stored in users.json under "listings")
+// ---------------------------------------------------------------------------
+
+export async function getListings(opts?: {
+  marketplace?: "store" | "community";
+  game?: string;
+  cardName?: string;
+  sellerId?: string;
+  includeSold?: boolean;
+}): Promise<Listing[]> {
+  const db = readDb();
+  let list = db.listings ?? [];
+  if (opts?.marketplace) list = list.filter((l) => l.marketplace === opts.marketplace);
+  if (opts?.game) list = list.filter((l) => l.game === opts.game);
+  if (opts?.cardName) list = list.filter((l) => l.cardName.toLowerCase().includes(opts.cardName!.toLowerCase()));
+  if (opts?.sellerId) list = list.filter((l) => l.sellerId === opts.sellerId);
+  if (!opts?.includeSold) list = list.filter((l) => !l.sold);
+  return list.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export async function getListingById(id: string): Promise<Listing | undefined> {
+  const db = readDb();
+  return (db.listings ?? []).find((l) => l.id === id);
+}
+
+export async function createListing(listing: Omit<Listing, "sellerUsername" | "sellerAvatarUrl">): Promise<Listing> {
+  const db = readDb();
+  const user = db.users.find((u) => u.id === listing.sellerId);
+  const full: Listing = {
+    ...listing,
+    sellerUsername: user?.username ?? "unknown",
+    sellerAvatarUrl: user?.avatarUrl,
+  };
+  db.listings = [...(db.listings ?? []), full];
+  writeDb(db);
+  return full;
+}
+
+export async function deleteListing(id: string, sellerId: string): Promise<boolean> {
+  const db = readDb();
+  const before = (db.listings ?? []).length;
+  db.listings = (db.listings ?? []).filter((l) => !(l.id === id && l.sellerId === sellerId));
+  writeDb(db);
+  return db.listings.length < before;
+}
+
+export async function markListingSold(id: string, sellerId: string): Promise<boolean> {
+  const db = readDb();
+  let found = false;
+  db.listings = (db.listings ?? []).map((l) => {
+    if (l.id === id && l.sellerId === sellerId) { found = true; return { ...l, sold: true }; }
+    return l;
+  });
+  writeDb(db);
+  return found;
+}
+
+// ---------------------------------------------------------------------------
+// Blog posts — local dev reads from content/posts/*.mdx files
+// ---------------------------------------------------------------------------
+
+const postsDirectory = path.join(process.cwd(), "content/posts");
+
+function readMdxPost(slug: string): DbPost | undefined {
+  const mdxPath = path.join(postsDirectory, `${slug}.mdx`);
+  const mdPath  = path.join(postsDirectory, `${slug}.md`);
+  const fullPath = fs.existsSync(mdxPath) ? mdxPath : fs.existsSync(mdPath) ? mdPath : null;
+  if (!fullPath) return undefined;
+
+  const raw = fs.readFileSync(fullPath, "utf8");
+  const { data, content } = matter(raw);
+  const fm = data as PostFrontmatter;
+  const rt = readingTime(content);
+
+  const PAYWALL_MARKER = "PAYWALL_BREAK";
+  const markerIndex = content.indexOf(PAYWALL_MARKER);
+  const freeContent =
+    fm.paywalled && markerIndex !== -1
+      ? content.slice(0, markerIndex).trim()
+      : undefined;
+
+  return { ...fm, slug, content, freeContent, readingTime: rt.text, tags: fm.tags ?? [] };
+}
+
+export async function getDbPostBySlug(slug: string): Promise<DbPost | undefined> {
+  return readMdxPost(slug);
+}
+
+export async function getAllDbPosts(): Promise<DbPostMeta[]> {
+  if (!fs.existsSync(postsDirectory)) return [];
+  return fs
+    .readdirSync(postsDirectory)
+    .filter((f) => f.endsWith(".mdx") || f.endsWith(".md"))
+    .map((f) => {
+      const slug = f.replace(/\.mdx?$/, "");
+      const post = readMdxPost(slug);
+      if (!post) return null;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { content, freeContent, ...meta } = post;
+      return meta;
+    })
+    .filter((p): p is DbPostMeta => p !== null)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+export async function getAllDbPostSlugs(): Promise<string[]> {
+  if (!fs.existsSync(postsDirectory)) return [];
+  return fs
+    .readdirSync(postsDirectory)
+    .filter((f) => f.endsWith(".mdx") || f.endsWith(".md"))
+    .map((f) => f.replace(/\.mdx?$/, ""));
+}
+
+export async function getDbPostsByCategory(category: string): Promise<DbPostMeta[]> {
+  const all = await getAllDbPosts();
+  return all.filter((p) => p.category === category);
+}
+
+export async function getPinnedDbPosts(category?: string): Promise<DbPostMeta[]> {
+  const all = await getAllDbPosts();
+  return all.filter((p) => p.pinned && (!category || p.category === category));
+}
+
+export async function getFeaturedDbPosts(limit = 3): Promise<DbPostMeta[]> {
+  const all = await getAllDbPosts();
+  const featured = all.filter((p) => p.featured);
+  return (featured.length > 0 ? featured : all).slice(0, limit);
+}
+
+export async function upsertPost(
+  slug: string,
+  frontmatter: PostFrontmatter,
+  content: string
+): Promise<void> {
+  // In local dev, write back to an MDX file so the round-trip is visible
+  const fm = Object.entries(frontmatter)
+    .filter(([, v]) => v !== undefined)
+    .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+    .join("\n");
+  const body = `---\n${fm}\n---\n\n${content}`;
+  if (!fs.existsSync(postsDirectory)) fs.mkdirSync(postsDirectory, { recursive: true });
+  fs.writeFileSync(path.join(postsDirectory, `${slug}.mdx`), body, "utf8");
+}
+
+export async function deletePost(slug: string): Promise<boolean> {
+  const mdxPath = path.join(postsDirectory, `${slug}.mdx`);
+  const mdPath  = path.join(postsDirectory, `${slug}.md`);
+  if (fs.existsSync(mdxPath)) { fs.unlinkSync(mdxPath); return true; }
+  if (fs.existsSync(mdPath))  { fs.unlinkSync(mdPath);  return true; }
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Messaging — not supported in JSON local dev, always returns empty
+// ---------------------------------------------------------------------------
+
+export async function sendMessage(_msg: {
+  id: string; listingId: string; fromUserId: string; toUserId: string; body: string;
+}): Promise<Message> {
+  throw new Error("Messaging requires Neon Postgres (DATABASE_URL).");
+}
+export async function getMessageThread(_listingId: string, _userId: string): Promise<Message[]> {
+  return [];
+}
+export async function getInboxThreads(_userId: string): Promise<MessageThread[]> {
+  return [];
+}
+export async function markThreadRead(_listingId: string, _userId: string): Promise<void> {
+  // no-op in local dev
+}
+export async function getUnreadCount(_userId: string): Promise<number> {
+  return 0;
+}
+
+// ---------------------------------------------------------------------------
+// Disputes — not supported in JSON local dev
+// ---------------------------------------------------------------------------
+
+export async function openDispute(_d: {
+  id: string; listingId: string; buyerId: string; sellerId: string; reason: string;
+}): Promise<Dispute> {
+  throw new Error("Disputes require Neon Postgres (DATABASE_URL).");
+}
+export async function getDisputesByListing(_listingId: string): Promise<Dispute[]> {
+  return [];
+}
+export async function updateDisputeStatus(
+  _id: string, _status: DisputeStatus, _resolution?: string
+): Promise<Dispute | undefined> {
+  return undefined;
 }

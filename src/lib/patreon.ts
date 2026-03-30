@@ -46,6 +46,20 @@ function patronStatusToSubscriptionStatus(
 }
 
 /**
+ * Derive a numeric tier level from the Patreon tier title.
+ * The tier names come from whatever you name them in the Patreon portal.
+ * Matching is case-insensitive.
+ *  "annual" / "yearly" / "year"  → 2
+ *  everything else (monthly etc) → 1
+ */
+function tierNameToLevel(tierName: string | undefined): number {
+  if (!tierName) return 1;
+  const lower = tierName.toLowerCase();
+  if (lower.includes("annual") || lower.includes("yearly") || lower.includes("year")) return 2;
+  return 1;
+}
+
+/**
  * Fetch the calling user's membership for our Patreon campaign.
  * Returns `undefined` if the user is not a member or an error occurs.
  */
@@ -114,10 +128,12 @@ export async function fetchPatreonSubscription(
       member.attributes.patron_status ?? null
     );
 
+    const tierTitle = tier?.attributes.title ?? "Patron";
     return {
       patreonMemberId: ref.id,
       tierId: tier?.id ?? "unknown",
-      tierName: tier?.attributes.title ?? "Patron",
+      tierName: tierTitle,
+      tierLevel: tierNameToLevel(tierTitle),
       status,
       currentPeriodEnd: member.attributes.next_charge_date ?? undefined,
       syncedAt: new Date().toISOString(),
@@ -145,10 +161,12 @@ export function parseWebhookMember(memberData: {
   const tier = tierRef ? includedTiers.find((t) => t.id === tierRef.id) : undefined;
   const status = patronStatusToSubscriptionStatus(memberData.attributes.patron_status ?? null);
 
+  const tierTitle = tier?.attributes.title ?? "Patron";
   return {
     patreonMemberId: memberData.id,
     tierId: tierRef?.id ?? "unknown",
-    tierName: tier?.attributes.title ?? "Patron",
+    tierName: tierTitle,
+    tierLevel: tierNameToLevel(tierTitle),
     status,
     currentPeriodEnd: memberData.attributes.next_charge_date ?? undefined,
     syncedAt: new Date().toISOString(),

@@ -15,12 +15,28 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { firstName, lastName, email, currentPassword, newPassword } = body;
+  const { firstName, lastName, email, currentPassword, newPassword, region, additionalRegions } = body;
 
   // Update basic fields
   if (firstName !== undefined) user.firstName = firstName.trim();
   if (lastName !== undefined) user.lastName = lastName.trim();
   if (email !== undefined) user.email = email.trim();
+
+  // Region update — validate against known codes (allow "GLOBAL" for stores)
+  if (region !== undefined) {
+    user.region = typeof region === "string" && region.length > 0
+      ? region.toUpperCase().trim()
+      : undefined;
+  }
+  if (additionalRegions !== undefined) {
+    if (Array.isArray(additionalRegions) && additionalRegions.length > 0) {
+      user.additionalRegions = additionalRegions
+        .map((r: string) => r.toUpperCase().trim())
+        .filter(Boolean);
+    } else {
+      user.additionalRegions = undefined;
+    }
+  }
 
   // Password change
   if (newPassword) {

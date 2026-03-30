@@ -1,7 +1,45 @@
+/**
+ * POST /api/fai-coach
+ *
+ * Free, server-side Fai coaching powered by Claude.
+ * No API key required from the user — costs are covered by the site.
+ *
+ * Rate limits (per IP, per calendar day):
+ *   • Anonymous / free account : FREE_DAILY_LIMIT messages
+ *   • Patreon subscriber        : unlimited
+ */
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { neon } from "@neondatabase/serverless";
+import { getSession } from "@/lib/session";
+
+const FREE_DAILY_LIMIT = 10;
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+function db() {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL is not set");
+  return neon(url);
+}
+
+/** Returns the number of messages sent today by this IP, then increments. */
+async function checkAndIncrementRateLimit(ip: string): Promise<{ count: number; allowed: boolean }> {
+  const sql = db();
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Upsert: insert new row or increment existing
+  const rows = await sql`
+    INSERT INTO fai_coach_rate_limits (ip, date, count)
+    VALUES (${ip}, ${today}::date, 1)
+    ON CONFLICT (ip, date) DO UPDATE
+      SET count = fai_coach_rate_limits.count + 1
+    RETURNING count
+  `;
+
+  const count = (rows[0] as { count: number }).count;
+  return { count, allowed: count <= FREE_DAILY_LIMIT };
+}
 
 const FAI_SYSTEM_PROMPT = `CONTEXT: Flesh and Blood TCG — Silver Age Format
 
@@ -112,21 +150,35 @@ type Message = { role: "user" | "assistant"; content: string };
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, password } = (await req.json()) as {
-      messages: Message[];
-      password: string;
-    };
+    const { messages } = (await req.json()) as { messages: Message[] };
 
-    // Password check
-    if (password !== process.env.FAI_COACH_PASSWORD) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (!messages || !Array.isArray(messages)) {
+    if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    // Keep last 10 messages — deeper context needed for coaching
+    // Check subscriber status — subscribers bypass rate limits
+    const session = await getSession();
+    const isSubscriber = session?.isSubscriber === true;
+
+    if (!isSubscriber) {
+      // Get real IP: Vercel sets x-forwarded-for
+      const forwarded = req.headers.get("x-forwarded-for");
+      const ip = forwarded ? forwarded.split(",")[0].trim() : "unknown";
+
+      const { count, allowed } = await checkAndIncrementRateLimit(ip);
+
+      if (!allowed) {
+        return NextResponse.json(
+          {
+            error: "rate_limited",
+            count,
+            limit: FREE_DAILY_LIMIT,
+          },
+          { status: 429 }
+        );
+      }
+    }
+
     const trimmed = messages.slice(-10) as Message[];
 
     const response = await client.messages.create({
@@ -136,10 +188,10 @@ export async function POST(req: NextRequest) {
       messages: trimmed,
     });
 
-    const text =
+    const reply =
       response.content[0].type === "text" ? response.content[0].text : "";
 
-    return NextResponse.json({ reply: text });
+    return NextResponse.json({ reply });
   } catch (err) {
     console.error("[/api/fai-coach]", err);
     return NextResponse.json(
@@ -148,3 +200,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+

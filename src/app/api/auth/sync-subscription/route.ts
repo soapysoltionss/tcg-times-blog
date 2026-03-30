@@ -51,9 +51,17 @@ export async function POST(req: NextRequest) {
     userId: user.id,
     username: user.username,
     isSubscriber,
+    tierName: user.subscription?.tierName,
+    tierLevel: user.subscription?.tierLevel,
+    regionCode: user.region,
   });
 
-  const res = NextResponse.json({ ok: true, isSubscriber });
+  const res = NextResponse.json({
+    ok: true,
+    isSubscriber,
+    tierName: user.subscription?.tierName ?? null,
+    tierLevel: user.subscription?.tierLevel ?? null,
+  });
   setSessionCookie(res, token);
   return res;
 }

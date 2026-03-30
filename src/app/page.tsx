@@ -3,11 +3,12 @@ import { getFeaturedPosts, getAllPosts } from "@/lib/posts";
 import { gameCategories } from "@/config/site";
 import PostCard from "@/components/PostCard";
 
-export default function HomePage() {
-  const featured = getFeaturedPosts(3);
-  const latest = getAllPosts().slice(0, 8);
-  const heroPost = featured[0] ?? latest[0];
-  const gridPosts = featured.length > 1 ? featured.slice(1, 4) : latest.slice(1, 4);
+export default async function HomePage() {
+  const featured = await getFeaturedPosts(3);
+  const latest = await getAllPosts();
+  const latestSlice = latest.slice(0, 8);
+  const heroPost = featured[0] ?? latestSlice[0];
+  const gridPosts = featured.length > 1 ? featured.slice(1, 4) : latestSlice.slice(1, 4);
 
   return (
     <div>
@@ -90,7 +91,7 @@ export default function HomePage() {
       )}
 
       {/* Numbered article list */}
-      {latest.slice(3).length > 0 && (
+      {latestSlice.slice(3).length > 0 && (
         <section className="max-w-7xl mx-auto px-6 lg:px-10 py-14">
           <div className="flex items-baseline justify-between mb-2">
             <h2
@@ -101,7 +102,7 @@ export default function HomePage() {
             </h2>
           </div>
           <div className="border-t-2 border-[var(--border-strong)]">
-            {latest.slice(3).map((post, i) => (
+            {latestSlice.slice(3).map((post, i) => (
               <PostCard key={post.slug} post={post} index={i + 3} variant="row" />
             ))}
           </div>
@@ -109,7 +110,7 @@ export default function HomePage() {
       )}
 
       {/* Empty state */}
-      {latest.length === 0 && (
+      {latestSlice.length === 0 && (
         <section className="max-w-7xl mx-auto px-6 lg:px-10 py-24 text-center">
           <h2
             className="text-3xl font-black text-[var(--foreground)] mb-4"

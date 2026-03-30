@@ -119,8 +119,15 @@ export async function GET(req: NextRequest) {
       userId: dbUser.id,
       username: dbUser.username,
       isSubscriber,
+      tierName: dbUser.subscription?.tierName,
+      tierLevel: dbUser.subscription?.tierLevel,
+      regionCode: dbUser.region,
     });
-    const destination = dbUser.needsUsername ? "/set-username" : "/profile";
+    const destination = dbUser.needsUsername
+      ? "/set-username"
+      : provider === "patreon"
+      ? "/profile?patreon=linked"
+      : "/profile";
     const res = NextResponse.redirect(new URL(destination, req.url));
     setSessionCookie(res, token);
     return res;

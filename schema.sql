@@ -10,7 +10,11 @@ CREATE TABLE IF NOT EXISTS users (
   id       TEXT PRIMARY KEY,
   email    TEXT UNIQUE NOT NULL,
   username TEXT UNIQUE NOT NULL,
-  data     JSONB NOT NULL
+  data     JSONB NOT NULL,
+  -- ISO 3166-1 alpha-2 primary region, e.g. "SG", "US", "JP"
+  -- Extracted from JSONB for fast region-filtered queries.
+  -- Stores supports a comma-separated list for multi-region, e.g. "SG,MY"
+  region   TEXT
 );
 
 -- Speed up lookups that search inside the JSONB oauthAccounts array
@@ -50,3 +54,127 @@ CREATE TABLE IF NOT EXISTS comments (
 CREATE INDEX IF NOT EXISTS idx_comments_slug        ON comments (slug);
 CREATE INDEX IF NOT EXISTS idx_comments_pending     ON comments (approved, created_at)
   WHERE approved = false;
+
+-- ---------------------------------------------------------------------------
+-- Marketplace listings
+-- marketplace column is derived from seller role at insert time:
+--   store account → 'store'
+--   any other role → 'community'
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS listings (
+  id              TEXT        PRIMARY KEY,
+  seller_id       TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  marketplace     TEXT        NOT NULL DEFAULT 'community', -- 'store' | 'community'
+  card_name       TEXT        NOT NULL,
+  set_name        TEXT        NOT NULL,
+  game            TEXT        NOT NULL,
+  condition       TEXT        NOT NULL,
+  condition_notes TEXT,
+  price_cents     INTEGER     NOT NULL,
+  quantity        INTEGER     NOT NULL DEFAULT 1,
+  image_url       TEXT,
+  description     TEXT,
+  -- ISO 3166-1 alpha-2 region of the seller at time of listing, e.g. "SG"
+  -- Populated from seller profile. Used for cross-region AI insights.
+  seller_region   TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  sold            BOOLEAN     NOT NULL DEFAULT false
+);
+
+CREATE INDEX IF NOT EXISTS idx_listings_marketplace ON listings (marketplace);
+CREATE INDEX IF NOT EXISTS idx_listings_game        ON listings (game);
+CREATE INDEX IF NOT EXISTS idx_listings_card        ON listings (lower(card_name));
+CREATE INDEX IF NOT EXISTS idx_listings_seller      ON listings (seller_id);
+
+-- ---------------------------------------------------------------------------
+-- Blog posts
+-- All posts are stored here. Content is raw MDX/Markdown (string).
+-- Frontmatter fields are also stored as JSONB for fast filtered queries
+-- (category, featured, paywalled, etc.) without parsing the content.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS posts (
+  slug        TEXT        PRIMARY KEY,
+  frontmatter JSONB       NOT NULL,
+  content     TEXT        NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Fast category / featured / date queries
+CREATE INDEX IF NOT EXISTS idx_posts_category ON posts ((frontmatter->>'category'));
+CREATE INDEX IF NOT EXISTS idx_posts_date     ON posts ((frontmatter->>'date') DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_featured ON posts ((frontmatter->>'featured'))
+  WHERE frontmatter->>'featured' = 'true';
+
+-- ---------------------------------------------------------------------------
+-- In-site messaging
+-- Messages are grouped into threads by listing_id. Either party in the
+-- listing (buyer or seller) can send a message. No email addresses exposed.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS messages (
+  id           TEXT        PRIMARY KEY,
+  listing_id   TEXT        NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  from_user_id TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_user_id   TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body         TEXT        NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  read_at      TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_listing    ON messages (listing_id);
+CREATE INDEX IF NOT EXISTS idx_messages_to_user    ON messages (to_user_id, read_at);
+CREATE INDEX IF NOT EXISTS idx_messages_from_user  ON messages (from_user_id);
+
+-- ---------------------------------------------------------------------------
+-- Disputes
+-- Buyers can open a dispute on a sold listing within 7 days.
+-- Status machine: open → under_review → resolved
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS disputes (
+  id           TEXT        PRIMARY KEY,
+  listing_id   TEXT        NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  buyer_id     TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  seller_id    TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reason       TEXT        NOT NULL,
+  status       TEXT        NOT NULL DEFAULT 'open', -- 'open' | 'under_review' | 'resolved'
+  resolution   TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_disputes_listing ON disputes (listing_id);
+CREATE INDEX IF NOT EXISTS idx_disputes_buyer   ON disputes (buyer_id);
+CREATE INDEX IF NOT EXISTS idx_disputes_status  ON disputes (status) WHERE status <> 'resolved';
+
+-- ---------------------------------------------------------------------------
+-- FAI Coach rate limits
+-- Tracks per-IP daily message counts for the free tier of the AI coach tool.
+-- Rows are keyed by (ip, date) and auto-expire after 2 days via a pg_cron job
+-- or simply by ignoring rows older than today in queries.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS fai_coach_rate_limits (
+  ip         TEXT        NOT NULL,
+  date       DATE        NOT NULL DEFAULT CURRENT_DATE,
+  count      INTEGER     NOT NULL DEFAULT 0,
+  PRIMARY KEY (ip, date)
+);
+
+-- ---------------------------------------------------------------------------
+-- Migration helpers (run once if upgrading an existing database)
+-- ---------------------------------------------------------------------------
+
+-- Add region column to users if it doesn't exist yet
+ALTER TABLE users ADD COLUMN IF NOT EXISTS region TEXT;
+
+-- Add seller_region column to listings if it doesn't exist yet
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS seller_region TEXT;
+
+-- Index for region-filtered user queries (e.g. find all SG-based stores)
+CREATE INDEX IF NOT EXISTS idx_users_region   ON users (region) WHERE region IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_listings_region ON listings (seller_region) WHERE seller_region IS NOT NULL;
+

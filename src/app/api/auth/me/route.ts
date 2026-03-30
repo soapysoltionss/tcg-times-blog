@@ -20,5 +20,13 @@ export async function GET() {
     user.subscription?.status === "active" ||
     user.subscription?.status === "declined";
 
-  return NextResponse.json({ user: safe, isSubscriber });
+  // Expose which providers are linked (provider names only — no tokens)
+  const linkedProviders = (user.oauthAccounts ?? []).map((a) => a.provider);
+
+  return NextResponse.json({
+    user: { ...safe, linkedProviders },
+    isSubscriber,
+    tierName: user.subscription?.tierName ?? null,
+    tierLevel: user.subscription?.tierLevel ?? null,
+  });
 }

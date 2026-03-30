@@ -3,6 +3,10 @@
     {
       "path": "/api/comments/approve",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/starter-guide/cron",
+      "schedule": "0 3 * * 1"
     }
   ]
 }

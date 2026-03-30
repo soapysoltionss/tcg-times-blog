@@ -24,7 +24,14 @@ export async function POST(req: NextRequest) {
     user.subscription?.status === "active" ||
     user.subscription?.status === "declined";
 
-  const token = await signSession({ userId: user.id, username: user.username, isSubscriber });
+  const token = await signSession({
+    userId: user.id,
+    username: user.username,
+    isSubscriber,
+    tierName: user.subscription?.tierName,
+    tierLevel: user.subscription?.tierLevel,
+    regionCode: user.region,
+  });
   const res = NextResponse.json({ ok: true, username: user.username });
   setSessionCookie(res, token);
   return res;
