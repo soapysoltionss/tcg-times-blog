@@ -85,9 +85,13 @@ export type JeuxProduct = {
   listingType: "card" | "sealed";
   tags: string[];
   imageUrl: string | null;
+  /** Card name to search against /api/fab-cards or /api/ga-cards when imageUrl is null */
+  fallbackImageQuery: string | null;
   variants: JeuxVariant[];
   /** Cheapest available variant price in SGD cents */
   lowestPriceSGD: number | null;
+  /** True when all variants are sold out */
+  soldOut: boolean;
   jeuxUrl: string;
   updatedAt: string;
 };
@@ -121,11 +125,15 @@ function normaliseGame(vendor: string, productType: string): string {
 
 // Sealed product detection — matches common Shopify product_type values
 const SEALED_KEYWORDS = ["sealed", "booster", "box", "pack", "deck", "bundle", "case", "collection", "display"];
+// Explicit single/card indicators — if present, never treat as sealed even if sealed keywords appear in tags
+const SINGLE_KEYWORDS = ["single", "singles"];
 
 function isSealedProduct(productType: string, tags: string[]): boolean {
   const pt = productType.toLowerCase();
-  if (SEALED_KEYWORDS.some((kw) => pt.includes(kw))) return true;
   const tagStr = tags.join(" ").toLowerCase();
+  // Explicit "single" override — always a card
+  if (SINGLE_KEYWORDS.some((kw) => pt.includes(kw) || tagStr.includes(kw))) return false;
+  if (SEALED_KEYWORDS.some((kw) => pt.includes(kw))) return true;
   return SEALED_KEYWORDS.some((kw) => tagStr.includes(kw));
 }
 
@@ -144,6 +152,8 @@ function normaliseProduct(p: ShopifyProduct): JeuxProduct {
       ? Math.min(...availableVariants.map((v) => v.priceSGD))
       : null;
 
+  const imageUrl = p.images[0]?.src ?? null;
+
   return {
     id: p.id,
     title: p.title,
@@ -152,9 +162,12 @@ function normaliseProduct(p: ShopifyProduct): JeuxProduct {
     productType: p.product_type,
     listingType: isSealedProduct(p.product_type, p.tags) ? "sealed" : "card",
     tags: p.tags,
-    imageUrl: p.images[0]?.src ?? null,
+    imageUrl,
+    // When no Shopify image, store the product title so the client can try card APIs
+    fallbackImageQuery: imageUrl ? null : p.title,
     variants,
     lowestPriceSGD,
+    soldOut: availableVariants.length === 0,
     jeuxUrl: `${JEUX_BASE}/products/${p.handle}`,
     updatedAt: p.updated_at,
   };
@@ -176,8 +189,9 @@ export async function getJeuxProducts(opts: {
   page?: number;
   revalidate?: number;
   listingType?: "card" | "sealed";
+  hideSoldOut?: boolean;
 } = {}): Promise<JeuxProduct[]> {
-  const { game, query, collection, page = 1, revalidate = 300, listingType } = opts;
+  const { game, query, collection, page = 1, revalidate = 300, listingType, hideSoldOut = false } = opts;
 
   // Shopify supports filtering by product_type or collection in the URL
   const base = collection
@@ -213,6 +227,11 @@ export async function getJeuxProducts(opts: {
   // Client-side listing type filter
   if (listingType) {
     products = products.filter((p) => p.listingType === listingType);
+  }
+
+  // Hide sold-out products (default: show all; caller can pass hideSoldOut=true)
+  if (hideSoldOut) {
+    products = products.filter((p) => !p.soldOut);
   }
 
   return products;

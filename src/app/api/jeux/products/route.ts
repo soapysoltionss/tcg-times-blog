@@ -24,9 +24,11 @@ export async function GET(req: NextRequest) {
     listingTypeParam === "card" || listingTypeParam === "sealed"
       ? (listingTypeParam as "card" | "sealed")
       : undefined;
+  // Hide sold-out by default; only show them when caller explicitly requests
+  const hideSoldOut = searchParams.get("hideSoldOut") !== "false";
 
   try {
-    const products = await getJeuxProducts({ game, query, page, revalidate: 300, listingType });
+    const products = await getJeuxProducts({ game, query, page, revalidate: 300, listingType, hideSoldOut });
     return NextResponse.json(
       { products, source: "jeuxkingdom.com" },
       {

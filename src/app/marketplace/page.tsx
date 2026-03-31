@@ -258,19 +258,37 @@ function ListingCard({ listing }: { listing: Listing }) {
 function JeuxListingCard({ product }: { product: JeuxProduct }) {
   const availableVariants = product.variants.filter((v) => v.available);
   const hasStock = availableVariants.length > 0;
+  const [fallbackImg, setFallbackImg] = useState<string | null>(null);
+
+  // Attempt to resolve a card image from the FaB / GA APIs if Shopify has no image
+  useEffect(() => {
+    if (product.imageUrl || !product.fallbackImageQuery) return;
+    const q = encodeURIComponent(product.fallbackImageQuery);
+    // Try FaB first, then GA
+    fetch(`/api/fab-cards?q=${q}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const img = d.cards?.[0]?.imageUrl;
+        if (img) { setFallbackImg(img); return; }
+        return fetch(`/api/ga-cards?q=${q}`)
+          .then((r) => r.json())
+          .then((d2) => { if (d2.cards?.[0]?.imageUrl) setFallbackImg(d2.cards[0].imageUrl); });
+      })
+      .catch(() => {});
+  }, [product.imageUrl, product.fallbackImageQuery]);
+
+  const displayImage = product.imageUrl ?? fallbackImg;
 
   return (
-    <a
-      href={product.jeuxUrl}
-      target="_blank"
-      rel="noopener noreferrer"
+    <Link
+      href={`/marketplace/jeux/${product.handle}`}
       className="group border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors bg-[var(--background)] flex flex-col"
     >
       {/* Image */}
       <div className="aspect-[3/4] bg-[var(--muted)] overflow-hidden relative">
-        {product.imageUrl ? (
+        {displayImage ? (
           <Image
-            src={product.imageUrl}
+            src={displayImage}
             alt={product.title}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
@@ -330,11 +348,11 @@ function JeuxListingCard({ product }: { product: JeuxProduct }) {
             <span className="text-sm text-[var(--text-muted)]">—</span>
           )}
           <span className="label-upper text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
-            Buy on Jeux →
+            View details →
           </span>
         </div>
       </div>
-    </a>
+    </Link>
   );
 }
 
@@ -384,6 +402,173 @@ function JeuxCreditsBadge() {
         >
           Link Jeux account ↗
         </a>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Filter panel (popover)
+// ---------------------------------------------------------------------------
+
+interface FilterPanelProps {
+  tab: "store" | "community";
+  storeSource: StoreSource;
+  setStoreSource: (v: StoreSource) => void;
+  productType: ProductTypeFilter;
+  setProductType: (v: ProductTypeFilter) => void;
+  game: string;
+  setGame: (v: string) => void;
+  showSoldOut: boolean;
+  setShowSoldOut: (v: boolean) => void;
+}
+
+function FilterPanel({
+  tab, storeSource, setStoreSource, productType, setProductType,
+  game, setGame, showSoldOut, setShowSoldOut,
+}: FilterPanelProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    function onPointerDown(e: PointerEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, []);
+
+  // Count active non-default filters
+  const activeCount = [
+    tab === "store" && storeSource !== "all",
+    productType !== "",
+    game !== "",
+    showSoldOut,
+  ].filter(Boolean).length;
+
+  return (
+    <div className="relative inline-block" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-2 label-upper px-4 py-2.5 text-[11px] border transition-colors ${
+          open || activeCount > 0
+            ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
+            : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
+        }`}
+      >
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <line x1="2" y1="4" x2="14" y2="4" />
+          <line x1="4" y1="8" x2="12" y2="8" />
+          <line x1="6" y1="12" x2="10" y2="12" />
+        </svg>
+        Filters
+        {activeCount > 0 && (
+          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold bg-[var(--background)] text-[var(--foreground)]">
+            {activeCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-2 z-50 w-72 bg-[var(--background)] border border-[var(--border-strong)] shadow-xl p-4 flex flex-col gap-5">
+
+          {/* Store source — only on Store tab */}
+          {tab === "store" && (
+            <div>
+              <p className="label-upper text-[10px] text-[var(--text-muted)] mb-2">Store</p>
+              <div className="flex flex-wrap gap-1.5">
+                {STORE_SOURCES.map((s) => (
+                  <button
+                    key={s.value}
+                    onClick={() => setStoreSource(s.value)}
+                    className={`label-upper px-3 py-1.5 text-[10px] border transition-colors ${
+                      storeSource === s.value
+                        ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
+                        : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Product type */}
+          <div>
+            <p className="label-upper text-[10px] text-[var(--text-muted)] mb-2">Product Type</p>
+            <div className="flex flex-wrap gap-1.5">
+              {PRODUCT_TYPES.map((pt) => (
+                <button
+                  key={pt.value}
+                  onClick={() => setProductType(pt.value)}
+                  className={`label-upper px-3 py-1.5 text-[10px] border transition-colors ${
+                    productType === pt.value
+                      ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
+                      : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
+                  }`}
+                >
+                  {pt.label === "All" ? "All Types" : pt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Game */}
+          <div>
+            <p className="label-upper text-[10px] text-[var(--text-muted)] mb-2">Game</p>
+            <div className="flex flex-wrap gap-1.5">
+              {GAMES.map((g) => (
+                <button
+                  key={g.value}
+                  onClick={() => setGame(g.value)}
+                  className={`label-upper px-3 py-1.5 text-[10px] border transition-colors ${
+                    game === g.value
+                      ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
+                      : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
+                  }`}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Show sold-out toggle */}
+          {tab === "store" && (
+            <div className="flex items-center justify-between pt-1 border-t border-[var(--border)]">
+              <span className="label-upper text-[10px] text-[var(--text-muted)]">Show sold-out</span>
+              <button
+                onClick={() => setShowSoldOut(!showSoldOut)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                  showSoldOut ? "bg-[var(--foreground)]" : "bg-[var(--border-strong)]"
+                }`}
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 rounded-full bg-[var(--background)] transition-transform ${
+                    showSoldOut ? "translate-x-4" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+          )}
+
+          {/* Clear all */}
+          {activeCount > 0 && (
+            <button
+              onClick={() => {
+                setStoreSource("all");
+                setProductType("");
+                setGame("");
+                setShowSoldOut(false);
+              }}
+              className="label-upper text-[10px] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors underline underline-offset-2 text-left"
+            >
+              Clear all filters
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -676,6 +861,8 @@ export default function MarketplacePage() {
   const [search, setSearch] = useState(""); // committed search term
   const [showSell, setShowSell] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // Hide sold-out products by default; revealed via filter toggle or when searching
+  const [showSoldOut, setShowSoldOut] = useState(false);
 
   // Check login state
   useEffect(() => {
@@ -698,10 +885,13 @@ export default function MarketplacePage() {
     if (game) params.set("game", game);
     if (search) params.set("query", search);
     if (productType) params.set("listingType", productType);
+    // Show sold-out only when explicitly toggled or when the user is searching
+    const hideSoldOut = !showSoldOut && !search;
+    if (!hideSoldOut) params.set("hideSoldOut", "false");
     const res = await fetch(`/api/jeux/products?${params}`);
     const data = await res.json();
     setJeuxProducts(data.products ?? []);
-  }, [tab, game, search, productType]);
+  }, [tab, game, search, productType, showSoldOut]);
 
   useEffect(() => {
     async function fetchAll() {
@@ -716,7 +906,7 @@ export default function MarketplacePage() {
     }
     fetchAll();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, game, search, storeSource, productType]);
+  }, [tab, game, search, storeSource, productType, showSoldOut]);
 
   function handleTabChange(t: "store" | "community") {
     setTab(t);
@@ -771,57 +961,44 @@ export default function MarketplacePage() {
         ))}
       </div>
 
-      {/* Store source filter — only on Store tab */}
-      {tab === "store" && (
-        <div className="flex flex-wrap gap-2 mb-5">
-          {STORE_SOURCES.map((s) => (
-            <button
-              key={s.value}
-              onClick={() => setStoreSource(s.value)}
-              className={`label-upper px-4 py-2 text-[11px] border transition-colors ${
-                storeSource === s.value
-                  ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
-                  : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Product type filter — both tabs */}
-      <div className="flex flex-wrap gap-2 mb-5">
-        {PRODUCT_TYPES.map((pt) => (
-          <button
-            key={pt.value}
-            onClick={() => setProductType(pt.value)}
-            className={`label-upper px-4 py-2 text-[11px] border transition-colors ${
-              productType === pt.value
-                ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
-                : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
-            }`}
-          >
-            {pt.label === "All" ? "All Types" : pt.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Game filter tabs */}
-      <div className="flex flex-wrap gap-2 mb-5">
-        {GAMES.map((g) => (
-          <button
-            key={g.value}
-            onClick={() => setGame(g.value)}
-            className={`label-upper px-4 py-2 text-[11px] border transition-colors ${
-              game === g.value
-                ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
-                : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
-            }`}
-          >
-            {g.label}
-          </button>
-        ))}
+      {/* Filter bar */}
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
+        <FilterPanel
+          tab={tab}
+          storeSource={storeSource}
+          setStoreSource={setStoreSource}
+          productType={productType}
+          setProductType={setProductType}
+          game={game}
+          setGame={setGame}
+          showSoldOut={showSoldOut}
+          setShowSoldOut={setShowSoldOut}
+        />
+        {/* Active filter chips */}
+        {storeSource !== "all" && tab === "store" && (
+          <span className="flex items-center gap-1 label-upper text-[10px] px-2.5 py-1.5 bg-[var(--muted)] border border-[var(--border)] text-[var(--foreground)]">
+            {STORE_SOURCES.find((s) => s.value === storeSource)?.label}
+            <button onClick={() => setStoreSource("all")} className="ml-0.5 opacity-50 hover:opacity-100">✕</button>
+          </span>
+        )}
+        {productType && (
+          <span className="flex items-center gap-1 label-upper text-[10px] px-2.5 py-1.5 bg-[var(--muted)] border border-[var(--border)] text-[var(--foreground)]">
+            {PRODUCT_TYPES.find((p) => p.value === productType)?.label}
+            <button onClick={() => setProductType("")} className="ml-0.5 opacity-50 hover:opacity-100">✕</button>
+          </span>
+        )}
+        {game && (
+          <span className="flex items-center gap-1 label-upper text-[10px] px-2.5 py-1.5 bg-[var(--muted)] border border-[var(--border)] text-[var(--foreground)]">
+            {GAMES.find((g) => g.value === game)?.label}
+            <button onClick={() => setGame("")} className="ml-0.5 opacity-50 hover:opacity-100">✕</button>
+          </span>
+        )}
+        {showSoldOut && (
+          <span className="flex items-center gap-1 label-upper text-[10px] px-2.5 py-1.5 bg-[var(--muted)] border border-[var(--border)] text-[var(--foreground)]">
+            Incl. sold out
+            <button onClick={() => setShowSoldOut(false)} className="ml-0.5 opacity-50 hover:opacity-100">✕</button>
+          </span>
+        )}
       </div>
 
       {/* Card / product search */}

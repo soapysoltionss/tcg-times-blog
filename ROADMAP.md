@@ -111,3 +111,21 @@ Problems in the TCG buying/selling space this site solves, with a step-by-step b
 | 12 | **4a** — Dispute system | High | High |
 | 13 | **5c** — FAI Coach budget deck context | Medium | Medium |
 | 14 | **4d** — Seller ID verification | High | Medium |
+| 15 | **8a–8f** — Live order book + price discovery | Very High | Very High |
+
+---
+
+## Problem 8 — No real-time price discovery or market liquidity
+
+**The issue:** Card prices in Singapore are opaque — sellers guess based on TCGPlayer (USD, US-focused) or Discord DMs. There is no SEA-specific live market, no transaction history, no volume data. Buyers can't tell if a price is fair. Sellers can't tell what the market will bear.
+
+**Our solution:** A stock market-style card exchange layer built on top of the existing marketplace. Buyers place bids, sellers place asks — the spread determines market price. Transaction volume, market cap, and price history are surfaced per card, per game, per region in real time.
+
+### Steps
+
+- [ ] **8a** — Add `transactions` table — records every completed sale: `cardName`, `game`, `setName`, `priceCents`, `quantity`, `buyerId`, `sellerId`, `completedAt`, `region`
+- [ ] **8b** — Add bid/ask order book — `orders` table with `type` (bid/ask), `priceCents`, `quantity`, `status` (open/filled/cancelled), `expiresAt`, `userId`, `cardName`, `game`
+- [ ] **8c** — `/tools/market/[game]/[cardName]` page — live order book view, price history chart, volume bars (daily/weekly/monthly), market cap estimate
+- [ ] **8d** — Market cap calculation — last sale price × estimated circulating supply (derived from print run data and regional sales velocity)
+- [ ] **8e** — Price discovery widget — embed on listing detail pages: "Last sold: $X.XX · 24h volume: N copies · 7d change: +/−X%"
+- [ ] **8f** — Aggregate volume dashboard — `/tools/market` landing page showing top movers, most traded cards, sealed product index, game-by-game activity heatmap
