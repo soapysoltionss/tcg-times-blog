@@ -9,6 +9,7 @@ import type { AnyCardResult } from "@/components/CardAutocomplete";
 import FlipCard from "@/components/FlipCard";
 import type { FabCardPrinting } from "@/app/api/fab-cards/route";
 import type { JeuxProduct } from "@/lib/jeux";
+import { getReprintRisk, REPRINT_RISK_STYLE, REPRINT_RISK_LABEL } from "@/lib/reprint-risk";
 
 // ---------------------------------------------------------------------------
 // SetNameCombobox
@@ -168,6 +169,10 @@ function conditionBadge(c: ListingCondition) {
 // ---------------------------------------------------------------------------
 
 function ListingCard({ listing }: { listing: Listing }) {
+  const reprintRisk = listing.listingType !== "sealed"
+    ? getReprintRisk(listing.cardName)
+    : null;
+
   return (
     <Link
       href={`/marketplace/${listing.id}`}
@@ -195,6 +200,14 @@ function ListingCard({ listing }: { listing: Listing }) {
         {listing.listingType === "sealed" && (
           <span className="absolute bottom-2 left-2 label-upper text-[10px] bg-purple-600 text-white px-2 py-0.5">
             Sealed
+          </span>
+        )}
+        {reprintRisk && (
+          <span
+            className={`absolute top-2 right-2 label-upper text-[10px] px-2 py-0.5 border ${REPRINT_RISK_STYLE[reprintRisk.risk]}`}
+            title={reprintRisk.notes}
+          >
+            {REPRINT_RISK_LABEL[reprintRisk.risk]}
           </span>
         )}
       </div>
@@ -677,7 +690,7 @@ function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
             {listingType === "card" ? (
               <>
                 <CardAutocomplete
-                  game={game as "flesh-and-blood" | "grand-archive" | "one-piece"}
+                  game={game as "flesh-and-blood" | "grand-archive" | "one-piece" | "pokemon"}
                   value={cardName}
                   onChange={(v) => { setCardName(v); setPriceSuggestion(null); setCardPrintings([]); }}
                   onSelect={handleCardSelect}

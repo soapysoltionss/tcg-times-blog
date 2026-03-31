@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { Listing, ListingCondition, Message } from "@/types/post";
 import { PriceGraph } from "@/components/PriceGraph";
 import FlipCard from "@/components/FlipCard";
+import { getReprintRisk, REPRINT_RISK_STYLE, REPRINT_RISK_LABEL } from "@/lib/reprint-risk";
 
 // ---------------------------------------------------------------------------
 // In-page message thread
@@ -248,6 +249,9 @@ export default function ListingDetailPage() {
   }
 
   const isSeller = userId === listing.sellerId;
+  const reprintRisk = listing.listingType !== "sealed"
+    ? getReprintRisk(listing.cardName)
+    : null;
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-10 py-10">
@@ -307,6 +311,14 @@ export default function ListingDetailPage() {
                 {listing.marketplace === "community" && (
                   <span className="label-upper text-[10px] px-2 py-0.5 border border-[var(--border)] text-[var(--text-muted)]">
                     Community
+                  </span>
+                )}
+                {reprintRisk && (
+                  <span
+                    className={`label-upper text-[10px] px-2 py-0.5 border ${REPRINT_RISK_STYLE[reprintRisk.risk]}`}
+                    title={reprintRisk.notes}
+                  >
+                    ⚠ {REPRINT_RISK_LABEL[reprintRisk.risk]}
                   </span>
                 )}
               </div>
@@ -432,7 +444,7 @@ export default function ListingDetailPage() {
 
           {/* Price graph */}
           <div>
-            <PriceGraph cardName={listing.cardName} data={[]} />
+            <PriceGraph cardName={listing.cardName} data={[]} showDrawdown />
           </div>
         </div>
 

@@ -70,6 +70,12 @@ export default function Header() {
             >
               AI Coach
             </Link>
+            <Link
+              href="/tools/market"
+              className="label-upper px-5 py-3 text-[var(--foreground)] hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors"
+            >
+              Market
+            </Link>
           </nav>
 
           {/* Mobile nav */}
@@ -94,6 +100,7 @@ export default function Header() {
               <Link href="/marketplace" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">Marketplace</Link>
               <Link href="/about" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">About</Link>
               <Link href="/tools/tcg-coach" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">AI Coach</Link>
+              <Link href="/tools/market" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">Market</Link>
               <Link href="/profile" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">Profile</Link>
               <Link href="/login" className="label-upper block py-2.5 text-[var(--foreground)] hover:bg-[var(--muted)] px-1 transition-colors">Sign In</Link>
             </div>

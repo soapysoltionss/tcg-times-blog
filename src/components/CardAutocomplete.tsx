@@ -4,22 +4,25 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { FabCardResult } from "@/app/api/fab-cards/route";
 import type { GaCardResult } from "@/app/api/ga-cards/route";
 import type { OpCardResult } from "@/app/api/op-cards/route";
+import type { PokemonCardResult } from "@/app/api/pokemon-cards/route";
 
-/** Normalised card shape shared by all three game endpoints */
-export type AnyCardResult = FabCardResult | GaCardResult | OpCardResult;
+/** Normalised card shape shared by all game endpoints */
+export type AnyCardResult = FabCardResult | GaCardResult | OpCardResult | PokemonCardResult;
 
-type SupportedGame = "flesh-and-blood" | "grand-archive" | "one-piece";
+type SupportedGame = "flesh-and-blood" | "grand-archive" | "one-piece" | "pokemon";
 
 const ENDPOINT: Record<SupportedGame, string> = {
   "flesh-and-blood": "/api/fab-cards",
   "grand-archive": "/api/ga-cards",
   "one-piece": "/api/op-cards",
+  "pokemon": "/api/pokemon-cards",
 };
 
 const PLACEHOLDER: Record<SupportedGame, string> = {
   "flesh-and-blood": "e.g. Iyslander, Stormbind",
   "grand-archive": "e.g. Merlin, Nameless Champion",
   "one-piece": "e.g. Monkey.D.Luffy, Nami",
+  "pokemon": "e.g. Charizard, Pikachu",
 };
 
 type Props = {

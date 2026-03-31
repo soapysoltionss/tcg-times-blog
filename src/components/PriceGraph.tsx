@@ -8,6 +8,8 @@ export interface PricePoint {
 interface Props {
   cardName: string;
   data: PricePoint[];
+  /** When true, show the drawdown % from the peak price */
+  showDrawdown?: boolean;
 }
 
 function formatPrice(cents: number) {
@@ -18,7 +20,7 @@ function formatPrice(cents: number) {
 // Tiny SVG line chart — no dependencies
 // ---------------------------------------------------------------------------
 
-export function PriceGraph({ cardName, data }: Props) {
+export function PriceGraph({ cardName, data, showDrawdown = false }: Props) {
   const W = 500;
   const H = 140;
   const PAD = { top: 16, right: 20, bottom: 36, left: 52 };
@@ -78,15 +80,38 @@ export function PriceGraph({ cardName, data }: Props) {
 
   const isPlaceholder = data.length < 2;
 
+  // Drawdown: peak-to-current decline
+  const peakPrice = Math.max(...points.map((p) => p.priceCents));
+  const currentPrice = points[points.length - 1].priceCents;
+  const drawdownPct = peakPrice > 0
+    ? ((currentPrice - peakPrice) / peakPrice) * 100
+    : 0;
+  const isAtPeak = currentPrice >= peakPrice;
+  const drawdownLabel = isAtPeak
+    ? "At peak"
+    : `${drawdownPct.toFixed(1)}% from peak`;
+  const drawdownColor = isAtPeak
+    ? "text-emerald-600 dark:text-emerald-400"
+    : drawdownPct < -30
+    ? "text-red-600 dark:text-red-400"
+    : "text-amber-600 dark:text-amber-400";
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-2">
         <p className="label-upper text-[var(--text-muted)] text-[10px]">Price History</p>
-        {isPlaceholder && (
-          <span className="label-upper text-[10px] px-2 py-0.5 bg-[var(--muted)] text-[var(--text-muted)] border border-[var(--border)]">
-            Placeholder Data
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {showDrawdown && !isPlaceholder && (
+            <span className={`label-upper text-[10px] font-semibold ${drawdownColor}`}>
+              {drawdownLabel}
+            </span>
+          )}
+          {isPlaceholder && (
+            <span className="label-upper text-[10px] px-2 py-0.5 bg-[var(--muted)] text-[var(--text-muted)] border border-[var(--border)]">
+              Placeholder Data
+            </span>
+          )}
+        </div>
       </div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
