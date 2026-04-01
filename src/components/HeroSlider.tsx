@@ -47,6 +47,42 @@ interface HeroSliderProps {
   latestSets:   LatestSet[];
 }
 
+// ─── Captivating headline hooks ──────────────────────────────────────────────
+// Each slide type gets a context-aware subtitle appended below the main title.
+// This creates the "Deoxys: Insights Behind the Hype" pattern without mutating
+// user-authored content (article titles stay as written).
+
+const SET_HOOKS = [
+  "What's It Worth Right Now?",
+  "The Cards Collectors Are Chasing",
+  "Prices, Pulls & Market Insights",
+  "Early Price Signals You Should Know",
+  "Which Cards Are Already Spiking?",
+];
+
+const MARKET_HOOKS = [
+  "The Price Driving the Market",
+  "Insights Behind the Hype",
+  "Why Collectors Are Paying a Premium",
+  "The Card Everyone Is Watching",
+  "A Closer Look at the Numbers",
+];
+
+const FORUM_HOOKS = [
+  "The Community Has Opinions",
+  "The Thread the TCG World Is Reading",
+  "Hot Take or Hard Truth?",
+  "Collectors Are Divided on This One",
+  "The Discussion You Don't Want to Miss",
+];
+
+/** Stable pseudo-random pick from an array, seeded by a string. */
+function pickHook(arr: string[], seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (Math.imul(31, h) + seed.charCodeAt(i)) | 0;
+  return arr[Math.abs(h) % arr.length];
+}
+
 // ─── Gradient map (game → CSS gradient) ──────────────────────────────────────
 
 const GAME_GRADIENT: Record<string, string> = {
@@ -65,6 +101,18 @@ function gradientFor(game: string) {
 
 function ArticleSlide({ post }: { post: PostMeta }) {
   const gradient = gradientFor(post.category);
+  // If the title already contains a colon or em-dash it's self-captivating.
+  // Otherwise append a punchy editorial hook as a second line.
+  const ARTICLE_HOOKS = [
+    "Insights Behind the Hype",
+    "What Every Collector Should Know",
+    "The Story the Numbers Tell",
+    "A Deep Dive Worth Your Time",
+    "Breaking Down What Matters",
+  ];
+  const needsHook = !/[:\u2014\u2013]/.test(post.title);
+  const articleHook = needsHook ? pickHook(ARTICLE_HOOKS, post.slug) : null;
+
   return (
     <div className="relative h-full min-h-[420px] md:min-h-[520px] overflow-hidden">
       {/* Background */}
@@ -90,11 +138,17 @@ function ArticleSlide({ post }: { post: PostMeta }) {
           New Article
         </span>
         <h2
-          className="text-3xl md:text-5xl font-black text-white leading-tight mb-4 drop-shadow"
+          className="text-3xl md:text-5xl font-black text-white leading-tight mb-1 drop-shadow"
           style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
         >
           {post.title}
         </h2>
+        {articleHook && (
+          <p className="text-white/50 text-lg md:text-2xl italic font-medium mb-3 drop-shadow"
+            style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}>
+            {articleHook}
+          </p>
+        )}
         {post.excerpt && (
           <p className="text-white/80 text-base md:text-lg max-w-2xl mb-6 line-clamp-2">
             {post.excerpt}
@@ -113,6 +167,7 @@ function ArticleSlide({ post }: { post: PostMeta }) {
 
 function MarketSlide({ report }: { report: MarketReportSnap }) {
   const priceDollars = (report.topCardPriceCents / 100).toFixed(2);
+  const hook = pickHook(MARKET_HOOKS, report.topCardName);
   return (
     <div className="relative h-full min-h-[420px] md:min-h-[520px] overflow-hidden">
       {/* Background: card art blurred + darkened */}
@@ -150,11 +205,15 @@ function MarketSlide({ report }: { report: MarketReportSnap }) {
           Market Report · {report.topGameEmoji} {report.topGame}
         </span>
         <h2
-          className="text-3xl md:text-5xl font-black text-white leading-tight mb-3 drop-shadow"
+          className="text-3xl md:text-5xl font-black text-white leading-tight mb-1 drop-shadow"
           style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
         >
           {report.topCardName}
         </h2>
+        <p className="text-white/50 text-lg md:text-2xl italic font-medium mb-3 drop-shadow"
+          style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}>
+          {hook}
+        </p>
         <div className="flex flex-wrap items-center gap-3 mb-2">
           <span className="text-2xl font-bold text-white">${priceDollars}</span>
           <span className="label-upper text-xs text-white/60 border border-white/30 px-2 py-0.5">
@@ -177,6 +236,7 @@ function MarketSlide({ report }: { report: MarketReportSnap }) {
 }
 
 function ForumSlide({ post }: { post: ForumPost }) {
+  const hook = pickHook(FORUM_HOOKS, post.title);
   return (
     <div className="relative h-full min-h-[420px] md:min-h-[520px] overflow-hidden">
       {/* Background: dark noise-ish gradient */}
@@ -193,11 +253,15 @@ function ForumSlide({ post }: { post: ForumPost }) {
           Trending Discussion
         </span>
         <h2
-          className="text-3xl md:text-5xl font-black text-white leading-tight mb-3 drop-shadow"
+          className="text-3xl md:text-5xl font-black text-white leading-tight mb-1 drop-shadow"
           style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
         >
           {post.title}
         </h2>
+        <p className="text-white/50 text-lg md:text-2xl italic font-medium mb-3 drop-shadow"
+          style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}>
+          {hook}
+        </p>
         <p className="text-white/70 text-base max-w-2xl mb-2 line-clamp-2">{post.body}</p>
         <div className="flex items-center gap-3 mb-6 text-sm text-white/60">
           <span className="flex items-center gap-1">
@@ -226,6 +290,7 @@ function LatestSetSlide({ set }: { set: LatestSet }) {
   const gradient = gradientFor(set.game);
   const gameName = set.game.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
   const setHref = `/tools/market/set/${set.game}/${set.groupId}`;
+  const hook = pickHook(SET_HOOKS, set.setName);
   return (
     <div className="relative h-full min-h-[420px] md:min-h-[520px] overflow-hidden">
       {set.imageUrl ? (
@@ -249,11 +314,15 @@ function LatestSetSlide({ set }: { set: LatestSet }) {
           Latest Release · {set.gameEmoji} {gameName}
         </span>
         <h2
-          className="text-3xl md:text-5xl font-black text-white leading-tight mb-3 drop-shadow"
+          className="text-3xl md:text-5xl font-black text-white leading-tight mb-1 drop-shadow"
           style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
         >
           {set.setName}
         </h2>
+        <p className="text-white/50 text-lg md:text-2xl italic font-medium mb-3 drop-shadow"
+          style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}>
+          {hook}
+        </p>
         <p className="text-white/70 text-sm md:text-base max-w-xl mb-6 leading-relaxed">
           Browse the full card list with TCGPlayer market prices. See which cards are leading
           in value, check reprint risk ratings, and explore market insights for this set.
