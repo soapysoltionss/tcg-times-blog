@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getFeaturedPosts, getAllPosts } from "@/lib/posts";
 import { gameCategories } from "@/config/site";
 import PostCard from "@/components/PostCard";
+import ArticleCarousel from "@/components/ArticleCarousel";
 
 export default async function HomePage() {
   const featured = await getFeaturedPosts(3);
@@ -9,6 +10,8 @@ export default async function HomePage() {
   const latestSlice = latest.slice(0, 8);
   const heroPost = featured[0] ?? latestSlice[0];
   const gridPosts = featured.length > 1 ? featured.slice(1, 4) : latestSlice.slice(1, 4);
+  // All posts for the carousel (up to 12), excluding the hero so there's no duplication
+  const carouselPosts = latest.filter(p => p.slug !== heroPost?.slug).slice(0, 12);
 
   return (
     <div>
@@ -65,6 +68,11 @@ export default async function HomePage() {
           </Link>
         </div>
       </section>
+
+      {/* Article carousel — sits right below the bulletin ticker */}
+      {carouselPosts.length > 0 && (
+        <ArticleCarousel posts={carouselPosts} title="Latest Articles" />
+      )}
 
       {/* Featured 3-column grid */}
       {gridPosts.length > 0 && (

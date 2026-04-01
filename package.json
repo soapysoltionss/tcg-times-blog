@@ -17,6 +17,8 @@
     "@types/uuid": "^10.0.0",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
+    "embla-carousel-autoplay": "^8.6.0",
+    "embla-carousel-react": "^8.6.0",
     "gray-matter": "^4.0.3",
     "jose": "^6.2.2",
     "next": "16.1.7",
