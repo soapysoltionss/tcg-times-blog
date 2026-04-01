@@ -4,6 +4,237 @@ Problems in the TCG buying/selling space this site solves, with a step-by-step b
 
 ---
 
+## Problem 1 — Trust & fees on existing marketplaces ✅ Partially done
+**The issue:** TCGPlayer charges sellers 10–15% + payment processor fees. Buyers get price-gouged by bot-driven repricing. There is no community relationship — you're transacting with a faceless storefront.
+
+**Our solution:** A community-first marketplace where sellers are known, rated members. Reputation is built through the existing XP system. No percentage cut — flat subscription for sellers via Patreon tiers. Trust signals visible on every listing.
+
+### Implemented
+- ✅ Full community + store marketplace at `/marketplace`
+- ✅ Trusted Seller badge (10+ sales) and Verified Seller badge (admin-granted) shown on every listing card
+- ✅ `totalSales` count visible on listing cards and detail pages
+- ✅ Seller role system: `reader / community / professional / store / admin`
+- ✅ Patreon subscription integration — tier level, status, and sync via webhook
+- ✅ XP-based reputation: level titles from "Novice Duelist" to "Master"
+
+### Still to do
+- [ ] **1b.** Add a "Leave feedback" flow after a sale is marked sold — buyer can rate the transaction (positive / neutral / negative) with an optional short note.
+- [ ] **1d.** Display full reputation summary (e.g. "47 sales · 98% positive") on listing detail page.
+
+---
+
+## Problem 2 — No price transparency or market education ✅ Partially done
+**The issue:** Players see prices but have no context for *why* they move — set rotation, tournament results, ban lists, reprint announcements. That knowledge lives in Discord and is never searchable.
+
+**Our solution:** Price movement articles tied to real events. "This card spiked because X won Y." Content and market data live in the same place.
+
+### Implemented
+- ✅ Market Ticker strip showing live price movers (`/api/ticker`)
+- ✅ Hero slider Market Report slide — surfaces top-priced active listing
+- ✅ Set detail pages at `/tools/market/set/[game]/[groupId]` — full card list with TCGPlayer market prices, price change %, reprint risk badges, market insights panel
+- ✅ Box EV calculator at `/tools/market/box-ev`
+- ✅ Market index landing page at `/tools/market`
+- ✅ Reprint risk system with per-card risk ratings and tooltips
+- ✅ `price_snapshots` Neon table — daily price data from tcgcsv.com, upserted once per day per card
+- ✅ PriceGraph component wired to real data on listing detail pages
+- ✅ Latest set slides on hero slider (latest set per game, with card list link)
+
+### Still to do
+- [ ] **2c.** `/tools/price-tracker` — search any card, see full price history graph, see which TCG Times articles mention that card.
+- [ ] **2d.** Article "card tag" hook — tag cards in frontmatter; they get a "Mentioned in" link on the price tracker page.
+
+---
+
+## Problem 3 — Cross-game fragmentation ✅ Done
+**The issue:** FaB, Grand Archive, and One Piece TCG buyers each use separate platforms, Discord servers, and Facebook groups. A multi-game player juggles five accounts.
+
+**Our solution:** One account, one marketplace, multiple games.
+
+### Implemented
+- ✅ Game filter on marketplace (Flesh and Blood / Grand Archive / One Piece TCG / Pokémon / Other)
+- ✅ Card autocomplete for FaB (`/api/fab-cards`), Grand Archive (`/api/ga-cards`), One Piece (`/api/op-cards`)
+- ✅ Per-game category pages at `/category/[slug]`
+- ✅ Per-game hero slider slides and set detail pages
+- ✅ Product type filter (Singles / Sealed) on marketplace
+
+---
+
+## Problem 4 — No buyer protection for P2P trades ✅ Done
+**The issue:** Facebook group and Discord trades are rampant with scams. No escrow, no dispute resolution, no verified seller history.
+
+**Our solution:** Structured dispute/feedback system. Verified seller badges. In-site messaging. Patreon subscribers automatically get a "Trusted" tier.
+
+### Implemented
+- ✅ Dispute system — buyers can open a dispute on a sold listing within 7 days; `open → under_review → resolved` state machine; admin resolution UI
+- ✅ In-site messaging — `messages` table; full inbox at `/profile` → Messages tab; no email addresses exposed
+- ✅ "Express Interest" button on listings — opens a message thread to the seller
+- ✅ Verified Seller badge (admin-granted ✦) shown on all listing cards
+- ✅ Trusted Seller badge (auto at 10+ sales ✓) shown on all listing cards
+
+### Still to do
+- [ ] **4d.** Formal seller ID verification flow — upload document or link Patreon, admin approval queue.
+
+---
+
+## Problem 5 — New players have no buying guide ✅ Done
+**The issue:** "What should I buy first?" and "Is this a good deal?" answers are buried in Discord and Reddit, not searchable, and go stale fast.
+
+**Our solution:** Evergreen buying guide articles, "budget build" posts, and the FAI Coach / TCG Coach tools.
+
+### Implemented
+- ✅ Starter Guide system — per-game pinned articles; seeded from `scripts/seed-starter-guides.mts`
+- ✅ `pinned` frontmatter field — pinned posts render at top of category pages
+- ✅ FAI Coach (`/tools/fai-coach`) — AI card assistant for Flesh and Blood
+- ✅ TCG Coach (`/tools/tcg-coach`) — multi-game AI assistant with region-aware responses
+- ✅ Buying Guide tag filter on `/blog` page
+- ✅ PaywallGate component — subscriber-only content gating per article
+- ✅ XP quest: "Read 5 articles" tracked and rewarded
+
+---
+
+## Problem 6 — Card condition is described inconsistently ✅ Done
+**The issue:** NM, LP, and MP mean different things to different sellers. Condition disputes are the #1 source of conflict in P2P sales.
+
+**Our solution:** Standardised condition guide with photo examples, enforced on every listing form.
+
+### Implemented
+- ✅ `/tools/condition-guide` — visual grading guide (Near Mint → Damaged) with per-tier descriptions, what to look for, and TCG-specific notes
+- ✅ Condition tooltip/link on listing creation form
+- ✅ `conditionNotes` free-text field on all listings — shows on listing cards and detail pages
+- ✅ Condition badge (colour-coded) on every listing card
+
+---
+
+## Problem 7 — Local player-to-player selling is dead ✅ Done
+**The issue:** The only local options are Facebook Marketplace (unsafe) or LGS buylist (terrible rates). There is no "find sellers near me" for TCGs.
+
+**Our solution:** Location-aware listings with city/region tagging, local filter, and a safety guide.
+
+### Implemented
+- ✅ `city` and `region` fields on user profiles — set in `/profile` → Edit Profile
+- ✅ `localPickup` boolean + `sellerCity` on listings — checkbox in listing creation form
+- ✅ 📍 City badge on listing cards when `localPickup = true`
+- ✅ "Local pickup only" filter toggle in marketplace FilterPanel + active chip
+- ✅ `/tools/local-meetup` safety guide — 9 practical tips for meeting strangers
+- ✅ Safety guide link surfaces below local-filtered results
+- ✅ DB columns: `users.city`, `listings.seller_city`, `listings.local_pickup` (live on Neon)
+
+---
+
+## Problem 8 — No real-time price discovery or market liquidity 🔄 In progress
+**The issue:** Card prices in Singapore are opaque — sellers guess based on TCGPlayer (USD, US-focused) or Discord DMs. There is no SEA-specific live market, no transaction history, no volume data.
+
+**Our solution:** A stock market-style card exchange layer. Buyers place bids, sellers place asks — the spread determines market price. Transaction volume, market cap, and price history surfaced per card.
+
+### Still to do
+- [ ] **8a.** `transactions` table — record every completed sale: `cardName`, `game`, `setName`, `priceCents`, `quantity`, `buyerId`, `sellerId`, `completedAt`, `region`
+- [ ] **8b.** Bid/ask order book — `orders` table with `type` (bid/ask), `priceCents`, `quantity`, `status` (open/filled/cancelled), `expiresAt`, `userId`, `cardName`, `game`
+- [ ] **8c.** `/tools/market/[game]/[cardName]` — live order book view, price history chart, volume bars, market cap estimate
+- [ ] **8d.** Market cap calculation — last sale price × estimated circulating supply
+- [ ] **8e.** Price discovery widget on listing detail pages — "Last sold: $X · 24h volume: N copies · 7d change: +/−X%"
+- [ ] **8f.** Aggregate volume dashboard — top movers, most traded cards, sealed product index, game-by-game activity heatmap
+
+---
+
+## Problem 9 — Daily engagement & gamification ✅ Done
+**The issue:** There is no reason to come back to the site daily. Readers consume one article and leave. No habit loop.
+
+**Our solution:** XP system, daily mini-games, and quests that reward consistent engagement.
+
+### Implemented
+- ✅ XP system — 8 levels from "Novice Duelist" to "Master"; XP bar in profile
+- ✅ Quest system — 8 quests rewarding key actions (register, complete profile, comment, post, read 5 articles, subscribe, complete a sale, guess the Pokémon)
+- ✅ "Guess That Pokémon!" daily mini-game at `/tools/guess-pokemon`
+  - Gen 1 Pokémon silhouette (CSS brightness filter on PokeAPI sprite)
+  - Deterministic daily pick by UTC date — same Pokémon worldwide
+  - 1 correct guess per UTC day; awards +50 XP on first correct answer
+  - Shake animation on wrong guesses; letter hint after 3 wrong attempts
+  - Countdown timer to next Pokémon reset
+  - `lastPokemonGuessDate` stored on user record
+  - Client-side `localStorage` fast path for page refreshes
+
+---
+
+## Problem 10 — TCG news is fragmented across Reddit, Discord, and niche sites
+**The issue:** Ban list announcements, rotation schedules, tournament breakout decklists, and new set information are scattered across Reddit (r/PokemonTCG, r/FleshandBlood, r/GrandArchive), Discord servers, fractalofin.site, and game-specific news sites. A competitive player needs 5+ tabs open daily just to stay current.
+
+**Our solution:** An automated news aggregation layer that scrapes and normalises structured game data from authoritative sources — ban lists, rotations, breakout decklists, new set card lists — and surfaces it inside TCG Times alongside market data and articles.
+
+### Steps
+
+- [ ] **10a.** **Reddit news scraper** — scheduled Vercel Cron job (daily) that hits the Reddit JSON API for the top posts from:
+  - `r/PokemonTCG`, `r/PokemonTCGDeals` — bans, rotation, set reveals
+  - `r/FleshandBlood` — ban/suspension list, OP cards, Calling results
+  - `r/GrandArchive` — set reveals, official ban announcements
+  - `r/OnePieceTCG` — ban list, format announcements
+  - Store results in a `news_items` Neon table: `(id, game, source, title, url, summary, publishedAt, tags[])`
+
+- [ ] **10b.** **fractalofin.site scraper** — FaB-specific ban/suspension/watch list page. Parse the HTML (Cheerio or Playwright) on a daily cron to extract structured ban/restriction data and upsert into a `ban_list` table: `(game, cardName, status, effectiveDate, reason, sourceUrl)`. Surface on the `/tools/fai-coach` sidebar and on individual card pages.
+
+- [ ] **10c.** **Official ban list polling** — direct polling of official announcement pages/feeds:
+  - Pokémon: `pokemon.com/us/pokemon-tcg/rules/` — rotation cutoff dates, ban list PDF
+  - Flesh and Blood: `fabtcg.com/suspended-and-banned/` — structured ban/suspension/watch list
+  - Grand Archive: official Discord announcements (webhook listener) + `grandarchivetcg.com` news feed
+  - One Piece: `one-piece-cardgame.com` — official ban/limited list
+
+- [ ] **10d.** **Rotation tracker for Pokémon** — parse the rotation cutoff set symbol list from the official Pokémon site. Build a `/tools/rotation` page showing: current legal sets, sets rotating at next rotation, rotation date countdown, and cards from rotating sets that are likely to spike or drop in price (cross-referenced with `price_snapshots`).
+
+- [ ] **10e.** **Breakout decklist aggregator** — scrape tournament results pages:
+  - FaB: `fabtcg.com/articles/` calling/nationals top 8 decklists
+  - Pokémon: `limitless.gg` top 8 tournament lists
+  - Grand Archive: official Grand Archive tournament reports
+  - Parse card names from decklists, cross-reference with marketplace listings to show "Cards in winning decks that are listed for sale"
+
+- [ ] **10f.** **New set card list ingestion** — when a new set is detected (via tcgcsv.com group data or official site scrape):
+  - Auto-ingest all card names + images from the set into `products` table
+  - For Grand Archive specifically: scrape `grandarchivetcg.com/cards` for the latest set's full card list and store with rarity, element, class, and cost data
+  - Trigger a "New Set Alert" hero slide on the homepage
+  - Surface the set's card list on `/tools/market/set/[game]/[groupId]` immediately
+
+- [ ] **10g.** **News feed UI** — `/tools/news` page with:
+  - Tabs per game (All / FaB / Grand Archive / One Piece / Pokémon)
+  - "Ban / Restriction" tag filter — shows only ban list changes across all games
+  - "Rotation" filter — shows only rotation / format change news
+  - "Tournament" filter — breakout results and top decklists
+  - "New Set" filter — card reveals and set releases
+  - Each item shows source badge (Reddit / Official / fractalofin / Discord), title, excerpt, date, and a link out
+
+- [ ] **10h.** **Ban list sidebar widget** — embed a compact "Current Bans" widget on:
+  - Individual card listing detail pages (if that card is banned/restricted)
+  - `/tools/fai-coach` and `/tools/tcg-coach` sidebars
+  - Category pages for each game
+
+- [ ] **10i.** **Discord webhook listener** — for games where Discord is the primary official announcement channel (Grand Archive, some FaB announcements), set up a lightweight webhook receiver endpoint (`/api/discord-webhook`) that receives messages from a designated server/channel, filters for keywords (`banned`, `suspended`, `rotation`, `new set`), and upserts to `news_items`.
+
+---
+
+## Implementation Order (updated)
+
+| # | Item | Effort | Impact | Status |
+|---|------|--------|--------|--------|
+| 1 | Problem 1 (marketplace, badges, XP) | — | High | ✅ Done |
+| 2 | Problem 3 (multi-game, autocomplete) | — | High | ✅ Done |
+| 3 | Problem 4 (messaging, disputes) | — | High | ✅ Done |
+| 4 | Problem 5 (starter guides, AI coach) | — | High | ✅ Done |
+| 5 | Problem 6 (condition guide) | — | Medium | ✅ Done |
+| 6 | Problem 7 (local pickup) | — | Medium | ✅ Done |
+| 7 | Problem 9 (Guess Pokémon, XP, quests) | — | High | ✅ Done |
+| 8 | Problem 2 (price tracker page + article tags) | Medium | High | 🔄 In progress |
+| 9 | Problem 8 (order book, transactions) | Very High | Very High | 🔄 In progress |
+| 10 | **10a** — Reddit news scraper (cron + DB) | Medium | High | ⬜ |
+| 11 | **10b** — fractalofin.site ban list scraper | Medium | High | ⬜ |
+| 12 | **10c** — Official ban list polling (FaB, Pokémon, GA, OP) | Medium | High | ⬜ |
+| 13 | **10d** — Pokémon rotation tracker page | Medium | High | ⬜ |
+| 14 | **10e** — Breakout decklist aggregator | High | High | ⬜ |
+| 15 | **10f** — New set auto-ingestion (Grand Archive priority) | High | High | ⬜ |
+| 16 | **10g** — `/tools/news` feed UI | Medium | High | ⬜ |
+| 17 | **10h** — Ban list sidebar widget | Low | Medium | ⬜ |
+| 18 | **10i** — Discord webhook listener | Medium | Medium | ⬜ |
+| 19 | Problem 1b — Post-sale feedback flow | Medium | High | ⬜ |
+| 20 | Problem 4d — Seller ID verification | High | Medium | ⬜ |
+
+---
+
 ## Problem 1 — Trust & fees on existing marketplaces (done)
 **The issue:** TCGPlayer charges sellers 10–15% + payment processor fees. Buyers get price-gouged by bot-driven repricing. There is no community relationship — you're transacting with a faceless storefront.
 
