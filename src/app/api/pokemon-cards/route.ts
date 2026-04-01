@@ -28,6 +28,8 @@ export interface PokemonCardResult {
   printings: PokemonCardPrinting[];
   /** cardmarket average sell price in USD cents, or null if unavailable */
   marketPriceCents: number | null;
+  /** % change computed from cardmarket avg7 vs avg30 — null if unavailable */
+  priceChangePct: number | null;
 }
 
 // ── Pokémon TCG API types (subset) ──────────────────────────────────────────
@@ -42,6 +44,8 @@ interface PokemonSet {
 interface PokemonCardPrices {
   averageSellPrice?: number;
   avg1?: number;
+  avg7?: number;
+  avg30?: number;
   low?: number;
   trend?: number;
 }
@@ -96,6 +100,17 @@ function getMarketPriceCents(card: PokemonCard): number | null {
   return null;
 }
 
+function getPriceChangePct(card: PokemonCard): number | null {
+  const cm = card.cardmarket?.prices;
+  if (!cm) return null;
+
+  const current = cm.averageSellPrice ?? cm.avg7;
+  const base    = cm.avg30 ?? cm.avg7;
+
+  if (!current || !base || base <= 0 || current === base) return null;
+  return Math.round(((current - base) / base) * 1000) / 10; // 1 decimal
+}
+
 function normalisePokemonCard(card: PokemonCard): PokemonCardResult {
   const printing: PokemonCardPrinting = {
     label: `${card.set.name} (#${card.number})`,
@@ -110,6 +125,7 @@ function normalisePokemonCard(card: PokemonCard): PokemonCardResult {
     imageUrl: card.images.large ?? card.images.small ?? null,
     printings: [printing],
     marketPriceCents: getMarketPriceCents(card),
+    priceChangePct:   getPriceChangePct(card),
   };
 }
 
@@ -162,12 +178,13 @@ export async function GET(req: NextRequest) {
       } else {
         // Add this printing to the existing entry
         existing.printings.push(...card.printings);
-        // Use the best price
+        // Use the best price and its associated change %
         if (
           card.marketPriceCents !== null &&
           (existing.marketPriceCents === null || card.marketPriceCents > existing.marketPriceCents)
         ) {
           existing.marketPriceCents = card.marketPriceCents;
+          existing.priceChangePct   = card.priceChangePct;
           existing.imageUrl = card.imageUrl;
           existing.setName = card.setName;
         }

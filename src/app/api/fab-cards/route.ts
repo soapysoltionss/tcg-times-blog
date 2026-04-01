@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getPriceMap, TCGPLAYER_CATEGORIES } from "@/lib/tcgplayer-prices";
 
 /**
  * GET /api/fab-cards?q=QUERY
@@ -34,6 +35,8 @@ export interface FabCardResult {
   /** All printings — one entry per unique (set + art variation) */
   printings: FabCardPrinting[];
   marketPriceCents: number | null;
+  /** % change vs yesterday from TCGPlayer — null if no history yet */
+  priceChangePct: number | null;
 }
 
 // ── Module-level cache ───────────────────────────────────────────────────────
@@ -149,6 +152,7 @@ async function buildIndex(): Promise<FabCardResult[]> {
       imageUrl: first?.imageUrl ?? null,
       printings,
       marketPriceCents: null,
+      priceChangePct: null,
     };
   });
 }
@@ -179,10 +183,22 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const index = await getIndex();
+    const [index, priceMap] = await Promise.all([
+      getIndex(),
+      getPriceMap("flesh-and-blood", TCGPLAYER_CATEGORIES["flesh-and-blood"], 6).catch(() => new Map()),
+    ]);
+
     const results = index
       .filter((c) => c.name.toLowerCase().includes(q))
-      .slice(0, 12);
+      .slice(0, 12)
+      .map((c) => {
+        const priceData = priceMap.get(c.name.toLowerCase());
+        return {
+          ...c,
+          marketPriceCents: priceData?.marketPriceCents ?? c.marketPriceCents,
+          priceChangePct:   priceData?.priceChangePct ?? null,
+        };
+      });
 
     return NextResponse.json({ cards: results });
   } catch (err) {

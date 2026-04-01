@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getPriceMap, TCGPLAYER_CATEGORIES } from "@/lib/tcgplayer-prices";
 
 /**
  * GET /api/op-cards?q=QUERY
@@ -28,8 +29,10 @@ export interface OpCardResult {
   imageUrl: string | null;
   /** One entry per printing (usually just one for OP cards) */
   printings: OpCardPrinting[];
-  /** Price data not available from this source */
-  marketPriceCents: null;
+  /** TCGPlayer market price in cents — null if unavailable */
+  marketPriceCents: number | null;
+  /** % change vs yesterday from TCGPlayer — null if no history yet */
+  priceChangePct: number | null;
 }
 
 interface SupabaseCard {
@@ -73,6 +76,9 @@ export async function GET(req: NextRequest) {
 
     const rows: SupabaseCard[] = await res.json();
 
+    // Load One Piece price map from TCGPlayer in parallel
+    const priceMap = await getPriceMap("one-piece", TCGPLAYER_CATEGORIES["one-piece"], 8).catch(() => new Map());
+
     const cards: OpCardResult[] = rows.map((row) => {
       const setName = row.card_sets ?? "";
       const imageUrl = row.url ?? null;
@@ -82,13 +88,16 @@ export async function GET(req: NextRequest) {
         imageUrl: imageUrl ?? "",
       };
 
+      const priceData = priceMap.get(row.name.toLowerCase());
+
       return {
         identifier: row.serial || String(row.id),
         name: row.name,
         setName,
         imageUrl,
         printings: imageUrl ? [printing] : [],
-        marketPriceCents: null,
+        marketPriceCents: priceData?.marketPriceCents ?? null,
+        priceChangePct:   priceData?.priceChangePct ?? null,
       };
     });
 

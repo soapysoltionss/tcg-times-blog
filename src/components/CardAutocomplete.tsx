@@ -186,9 +186,23 @@ export default function CardAutocomplete({
 
                 {/* Price hint */}
                 {card.marketPriceCents !== null && (
-                  <span className="label-upper text-[10px] text-[var(--text-muted)] shrink-0">
-                    ~${(card.marketPriceCents / 100).toFixed(2)}
-                  </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="label-upper text-[10px] text-[var(--text-muted)]">
+                      ~${(card.marketPriceCents / 100).toFixed(2)}
+                    </span>
+                    {card.priceChangePct !== null && card.priceChangePct !== 0 && (
+                      <span
+                        className={`text-[10px] font-bold tabular-nums leading-none ${
+                          card.priceChangePct > 0
+                            ? "text-emerald-500 dark:text-emerald-400"
+                            : "text-red-500 dark:text-red-400"
+                        }`}
+                      >
+                        {card.priceChangePct > 0 ? "▲" : "▼"}
+                        {Math.abs(card.priceChangePct).toFixed(1)}%
+                      </span>
+                    )}
+                  </div>
                 )}
               </button>
             </li>

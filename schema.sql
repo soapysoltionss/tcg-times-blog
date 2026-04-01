@@ -155,6 +155,28 @@ CREATE INDEX IF NOT EXISTS idx_disputes_buyer   ON disputes (buyer_id);
 CREATE INDEX IF NOT EXISTS idx_disputes_status  ON disputes (status) WHERE status <> 'resolved';
 
 -- ---------------------------------------------------------------------------
+-- TCGPlayer price snapshots
+-- One row per (game, card_name, recorded_date). Populated by the card-search
+-- routes on first call each day via tcgcsv.com (daily TCGPlayer mirror).
+-- Enables % price change by comparing today vs yesterday.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS price_snapshots (
+  id            SERIAL      PRIMARY KEY,
+  game          TEXT        NOT NULL,
+  card_name     TEXT        NOT NULL,
+  tcgplayer_id  INTEGER,
+  price_cents   INTEGER     NOT NULL,
+  recorded_date DATE        NOT NULL DEFAULT CURRENT_DATE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_price_snapshots_unique
+  ON price_snapshots (lower(game), lower(card_name), recorded_date);
+
+CREATE INDEX IF NOT EXISTS idx_price_snapshots_lookup
+  ON price_snapshots (lower(game), lower(card_name), recorded_date DESC);
+
+-- ---------------------------------------------------------------------------
 -- FAI Coach rate limits
 -- Tracks per-IP daily message counts for the free tier of the AI coach tool.
 -- Rows are keyed by (ip, date) and auto-expire after 2 days via a pg_cron job

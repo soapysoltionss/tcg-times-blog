@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getPriceMap, TCGPLAYER_CATEGORIES } from "@/lib/tcgplayer-prices";
 
 /**
  * GET /api/ga-cards?q=QUERY
@@ -28,8 +29,10 @@ export interface GaCardResult {
   imageUrl: string | null;
   /** One entry per edition/printing */
   printings: GaCardPrinting[];
-  /** GA API does not provide market prices — always null */
-  marketPriceCents: null;
+  /** TCGPlayer market price in cents — null if unavailable */
+  marketPriceCents: number | null;
+  /** % change vs yesterday from TCGPlayer — null if no history yet */
+  priceChangePct: number | null;
 }
 
 interface GaEdition {
@@ -81,6 +84,9 @@ export async function GET(req: NextRequest) {
 
     const data: GaSearchResponse = await res.json();
 
+    // Load GA price map in parallel with the search
+    const priceMap = await getPriceMap("grand-archive", TCGPLAYER_CATEGORIES["grand-archive"], 5).catch(() => new Map());
+
     const cards: GaCardResult[] = (data.results ?? []).map((card) => {
       // Use result_editions if available (matching editions), otherwise fall back to all editions
       const editions: GaEdition[] = card.result_editions?.length
@@ -94,6 +100,7 @@ export async function GET(req: NextRequest) {
       }));
 
       const first = editions[0] ?? null;
+      const priceData = priceMap.get(card.name.toLowerCase());
 
       return {
         identifier: first?.uuid ?? card.uuid,
@@ -101,7 +108,8 @@ export async function GET(req: NextRequest) {
         setName: first?.set.name ?? "",
         imageUrl: first ? `${GA_API}${first.image}` : null,
         printings,
-        marketPriceCents: null,
+        marketPriceCents: priceData?.marketPriceCents ?? null,
+        priceChangePct:   priceData?.priceChangePct ?? null,
       };
     });
 
