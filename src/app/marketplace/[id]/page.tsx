@@ -3,10 +3,113 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Listing, ListingCondition, Message } from "@/types/post";
+import type { Listing, ListingCondition, Message, FeedbackRating } from "@/types/post";
 import { PriceGraph } from "@/components/PriceGraph";
 import FlipCard from "@/components/FlipCard";
 import { getReprintRisk, REPRINT_RISK_STYLE, REPRINT_RISK_LABEL } from "@/lib/reprint-risk";
+import { BanListWidget } from "@/components/BanListWidget";
+
+// ---------------------------------------------------------------------------
+// Feedback modal
+// ---------------------------------------------------------------------------
+
+const RATING_META: Record<FeedbackRating, { emoji: string; label: string; color: string }> = {
+  positive: { emoji: "👍", label: "Positive", color: "border-emerald-400 bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700" },
+  neutral:  { emoji: "😐", label: "Neutral",  color: "border-yellow-400 bg-yellow-50 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700" },
+  negative: { emoji: "👎", label: "Negative", color: "border-red-400 bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700" },
+};
+
+function FeedbackModal({
+  listingId,
+  onClose,
+  onDone,
+}: {
+  listingId: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [rating, setRating] = useState<FeedbackRating | null>(null);
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!rating) { setError("Please select a rating."); return; }
+    setSubmitting(true); setError("");
+    const res = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId, rating, note: note.trim() || undefined }),
+    });
+    const data = await res.json();
+    if (!res.ok) { setError(data.error ?? "Failed to submit."); setSubmitting(false); return; }
+    onDone();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+      <div className="w-full max-w-md bg-[var(--background)] border border-[var(--border-strong)] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+          <p className="label-upper text-[10px] font-bold text-[var(--foreground)]">Leave Seller Feedback</p>
+          <button onClick={onClose} className="label-upper text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors">✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-5">
+          {/* Rating buttons */}
+          <div>
+            <p className="label-upper text-[10px] text-[var(--text-muted)] mb-3">How was your experience?</p>
+            <div className="flex gap-3">
+              {(["positive", "neutral", "negative"] as FeedbackRating[]).map((r) => {
+                const meta = RATING_META[r];
+                const selected = rating === r;
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRating(r)}
+                    className={`flex-1 flex flex-col items-center gap-1.5 py-3 px-2 border-2 transition-all ${
+                      selected ? meta.color : "border-[var(--border)] bg-[var(--muted)] text-[var(--text-muted)]"
+                    }`}
+                  >
+                    <span className="text-xl">{meta.emoji}</span>
+                    <span className="label-upper text-[10px] font-bold">{meta.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Optional note */}
+          <div>
+            <label className="label-upper text-[10px] text-[var(--text-muted)] block mb-2">
+              Add a note <span className="opacity-50">(optional)</span>
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder="e.g. Fast shipping, well packaged, exactly as described."
+              className="w-full border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--border-strong)] outline-none resize-none"
+            />
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">{note.length}/500</p>
+          </div>
+
+          {error && <p className="text-xs text-red-500">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={submitting || !rating}
+            className="label-upper py-2.5 bg-[var(--foreground)] text-[var(--background)] hover:opacity-70 disabled:opacity-30 transition-opacity text-[10px]"
+          >
+            {submitting ? "Submitting…" : "Submit Feedback"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // In-page message thread
@@ -186,6 +289,9 @@ export default function ListingDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState("");
   const [showMessages, setShowMessages] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackDone, setFeedbackDone] = useState(false);
+  const [feedbackSummary, setFeedbackSummary] = useState<{ positive: number; neutral: number; negative: number; total: number } | null>(null);
 
   // Fetch listing
   useEffect(() => {
@@ -195,7 +301,17 @@ export default function ListingDetailPage() {
         return r.json();
       })
       .then((data) => {
-        if (data) { setListing(data.listing); setLoading(false); }
+        if (data) {
+          setListing(data.listing);
+          setLoading(false);
+          // Fetch feedback summary for the seller
+          if (data.listing?.sellerId) {
+            fetch(`/api/feedback?sellerId=${data.listing.sellerId}`)
+              .then(r => r.json())
+              .then(d => { if (d.summary) setFeedbackSummary(d.summary); })
+              .catch(() => {});
+          }
+        }
       });
   }, [id]);
 
@@ -385,6 +501,11 @@ export default function ListingDetailPage() {
                     {(listing.sellerTotalSales ?? 0) > 0 ? (
                       <span className="label-upper text-[10px] text-[var(--text-muted)]">
                         {listing.sellerTotalSales} completed sale{listing.sellerTotalSales !== 1 ? "s" : ""}
+                        {feedbackSummary && feedbackSummary.total > 0 && (
+                          <span className="ml-1 opacity-70">
+                            · {Math.round((feedbackSummary.positive / feedbackSummary.total) * 100)}% positive ({feedbackSummary.total} review{feedbackSummary.total !== 1 ? "s" : ""})
+                          </span>
+                        )}
                       </span>
                     ) : (
                       <span className="label-upper text-[10px] text-[var(--text-muted)] opacity-50">New seller</span>
@@ -402,6 +523,23 @@ export default function ListingDetailPage() {
                   >
                     Message Seller →
                   </button>
+                </div>
+              )}
+              {/* Leave feedback on a sold listing */}
+              {listing.sold && !isSeller && userId && (
+                <div className="flex flex-wrap gap-3 mt-2">
+                  {feedbackDone ? (
+                    <span className="label-upper text-[10px] text-emerald-600 dark:text-emerald-400 py-2.5">
+                      ✓ Feedback submitted
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => setShowFeedback(true)}
+                      className="label-upper px-5 py-2.5 border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors text-[10px]"
+                    >
+                      Leave Feedback
+                    </button>
+                  )}
                 </div>
               )}
               {!listing.sold && !isSeller && !userId && (
@@ -474,6 +612,19 @@ export default function ListingDetailPage() {
             </p>
           </div>
 
+          {/* Ban list widget */}
+          <BanListWidget
+            game={
+              listing.game === "Flesh and Blood" ? "fab"
+              : listing.game === "Grand Archive"  ? "grand-archive"
+              : listing.game === "One Piece TCG"  ? "one-piece"
+              : listing.game === "Pokémon"         ? "pokemon"
+              : "all"
+            }
+            limit={4}
+            title="Recent Ban News"
+          />
+
           {/* Similar listings placeholder */}
           <div className="border border-[var(--border)] p-5">
             <p className="label-upper text-[10px] text-[var(--text-muted)] mb-3">Similar Listings</p>
@@ -505,6 +656,15 @@ export default function ListingDetailPage() {
           isSeller={isSeller}
           currentUserId={userId}
           onClose={() => setShowMessages(false)}
+        />
+      )}
+
+      {/* Feedback modal */}
+      {showFeedback && listing && (
+        <FeedbackModal
+          listingId={listing.id}
+          onClose={() => setShowFeedback(false)}
+          onDone={() => { setShowFeedback(false); setFeedbackDone(true); }}
         />
       )}
     </div>

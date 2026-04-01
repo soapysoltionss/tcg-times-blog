@@ -210,3 +210,50 @@ ALTER TABLE listings ADD COLUMN IF NOT EXISTS seller_city  TEXT;
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS local_pickup BOOLEAN NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS idx_listings_local ON listings (local_pickup) WHERE local_pickup = true;
+
+-- ---------------------------------------------------------------------------
+-- Problem 1b: Post-sale seller feedback
+-- Buyers can leave positive / neutral / negative feedback after a sale.
+-- One feedback per (buyer, listing) pair.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS seller_feedback (
+  id          TEXT        PRIMARY KEY,
+  listing_id  TEXT        NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  buyer_id    TEXT        NOT NULL REFERENCES users(id)    ON DELETE CASCADE,
+  seller_id   TEXT        NOT NULL REFERENCES users(id)    ON DELETE CASCADE,
+  rating      TEXT        NOT NULL, -- 'positive' | 'neutral' | 'negative'
+  note        TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (buyer_id, listing_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_feedback_seller  ON seller_feedback (seller_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_listing ON seller_feedback (listing_id);
+
+-- ---------------------------------------------------------------------------
+-- Problem 10a: Aggregated news items from Reddit and other sources
+-- Populated by the /api/news-scraper cron job (daily).
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS news_items (
+  id           TEXT        PRIMARY KEY,
+  game         TEXT        NOT NULL, -- 'fab' | 'grand-archive' | 'one-piece' | 'pokemon' | 'general'
+  source       TEXT        NOT NULL, -- 'reddit' | 'official' | 'fractalofin' | 'discord'
+  subreddit    TEXT,                 -- e.g. 'FleshandBlood' (Reddit posts only)
+  title        TEXT        NOT NULL,
+  url          TEXT        NOT NULL,
+  summary      TEXT,
+  published_at TIMESTAMPTZ NOT NULL,
+  tags         TEXT[]      NOT NULL DEFAULT '{}', -- ['ban','rotation','tournament','new-set']
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (url)
+);
+
+CREATE INDEX IF NOT EXISTS idx_news_game       ON news_items (game, published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_news_tags       ON news_items USING gin (tags);
+CREATE INDEX IF NOT EXISTS idx_news_published  ON news_items (published_at DESC);
+
+-- Migration helpers for existing databases
+ALTER TABLE seller_feedback ADD COLUMN IF NOT EXISTS rating TEXT;
+ALTER TABLE seller_feedback ADD COLUMN IF NOT EXISTS note   TEXT;

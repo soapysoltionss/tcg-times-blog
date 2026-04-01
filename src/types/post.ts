@@ -218,3 +218,42 @@ export type ForumComment = {
   createdAt: string;
 };
 
+// ---------------------------------------------------------------------------
+// Seller Feedback (Problem 1b)
+// ---------------------------------------------------------------------------
+
+export type FeedbackRating = "positive" | "neutral" | "negative";
+
+export type SellerFeedback = {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  buyerUsername: string;
+  sellerId: string;
+  sellerUsername: string;
+  rating: FeedbackRating;
+  note?: string | null;
+  createdAt: string;
+};
+
+// ---------------------------------------------------------------------------
+// News Items (Problem 10a)
+// ---------------------------------------------------------------------------
+
+export type NewsSource = "reddit" | "official" | "fractalofin" | "discord";
+export type NewsGame = "fab" | "grand-archive" | "one-piece" | "pokemon" | "general";
+export type NewsTag = "ban" | "rotation" | "tournament" | "new-set";
+
+export type NewsItem = {
+  id: string;
+  game: NewsGame;
+  source: NewsSource;
+  subreddit?: string | null;
+  title: string;
+  url: string;
+  summary?: string | null;
+  publishedAt: string;
+  tags: NewsTag[];
+  createdAt: string;
+};
+

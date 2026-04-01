@@ -9,7 +9,7 @@
 
 import type { User } from "@/lib/xp";
 import { TASK_CATALOGUE, xpToLevel } from "@/lib/xp";
-import type { PostComment, Listing, ListingType, PostFrontmatter, Message, MessageThread, Dispute, DisputeStatus } from "@/types/post";
+import type { PostComment, Listing, ListingType, PostFrontmatter, Message, MessageThread, Dispute, DisputeStatus, SellerFeedback, FeedbackRating, NewsItem, NewsGame, NewsTag } from "@/types/post";
 import type { DbPost, DbPostMeta } from "@/lib/db-neon";
 
 export type { User };
@@ -234,4 +234,66 @@ export async function updateDisputeStatus(
   resolution?: string
 ): Promise<Dispute | undefined> {
   return (await backend()).updateDisputeStatus(id, status, resolution);
+}
+
+// ---------------------------------------------------------------------------
+// Seller Feedback (Problem 1b)
+// ---------------------------------------------------------------------------
+
+export async function createFeedback(feedback: {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  rating: FeedbackRating;
+  note?: string;
+}): Promise<SellerFeedback> {
+  return (await backend()).createFeedback(feedback);
+}
+
+export async function getFeedbackBySeller(sellerId: string): Promise<SellerFeedback[]> {
+  return (await backend()).getFeedbackBySeller(sellerId);
+}
+
+export async function getFeedbackSummary(
+  sellerId: string
+): Promise<{ positive: number; neutral: number; negative: number; total: number }> {
+  return (await backend()).getFeedbackSummary(sellerId);
+}
+
+export async function hasFeedback(buyerId: string, listingId: string): Promise<boolean> {
+  return (await backend()).hasFeedback(buyerId, listingId);
+}
+
+// ---------------------------------------------------------------------------
+// News Items (Problem 10a / 10g)
+// ---------------------------------------------------------------------------
+
+export async function upsertNewsItems(
+  items: Array<{
+    id: string;
+    game: NewsGame;
+    source: "reddit" | "official" | "fractalofin" | "discord";
+    subreddit?: string;
+    title: string;
+    url: string;
+    summary?: string;
+    publishedAt: string;
+    tags: NewsTag[];
+  }>
+): Promise<number> {
+  return (await backend()).upsertNewsItems(items);
+}
+
+export async function getNewsItems(opts?: {
+  game?: NewsGame | "all";
+  tag?: NewsTag;
+  limit?: number;
+  offset?: number;
+}): Promise<NewsItem[]> {
+  return (await backend()).getNewsItems(opts);
+}
+
+export async function getRecentBanNews(game?: NewsGame, limit?: number): Promise<NewsItem[]> {
+  return (await backend()).getRecentBanNews(game, limit);
 }

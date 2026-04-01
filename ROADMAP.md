@@ -18,7 +18,7 @@ Problems in the TCG buying/selling space this site solves, with a step-by-step b
 - ✅ XP-based reputation: level titles from "Novice Duelist" to "Master"
 
 ### Still to do
-- [ ] **1b.** Add a "Leave feedback" flow after a sale is marked sold — buyer can rate the transaction (positive / neutral / negative) with an optional short note.
+- [ ] **1b.** ~~Add a "Leave feedback" flow after a sale is marked sold~~ ✅ Done — buyer can rate the transaction (positive / neutral / negative) with an optional short note; feedback summary shows on seller block
 - [ ] **1d.** Display full reputation summary (e.g. "47 sales · 98% positive") on listing detail page.
 
 ---
@@ -155,12 +155,19 @@ Problems in the TCG buying/selling space this site solves, with a step-by-step b
 
 ---
 
-## Problem 10 — TCG news is fragmented across Reddit, Discord, and niche sites
+## Problem 10 — TCG news is fragmented across Reddit, Discord, and niche sites ✅ Partially done
 **The issue:** Ban list announcements, rotation schedules, tournament breakout decklists, and new set information are scattered across Reddit (r/PokemonTCG, r/FleshandBlood, r/GrandArchive), Discord servers, fractalofin.site, and game-specific news sites. A competitive player needs 5+ tabs open daily just to stay current.
 
 **Our solution:** An automated news aggregation layer that scrapes and normalises structured game data from authoritative sources — ban lists, rotations, breakout decklists, new set card lists — and surfaces it inside TCG Times alongside market data and articles.
 
-### Steps
+### Implemented
+- ✅ `news_items` Neon table — `(id, game, source, subreddit, title, url, summary, published_at, tags[], created_at)`
+- ✅ `/api/news-scraper` — Vercel Cron (daily 06:00 UTC) — fetches hot posts from r/PokemonTCG, r/PokemonTCGDeals, r/FleshandBlood, r/GrandArchive, r/OnePieceTCG; keyword-filters for ban/rotation/tournament/new-set; upserts into `news_items`
+- ✅ `/api/news` — public query endpoint with `?game=&tag=&limit=&offset=` filters; CDN-cached 5 min
+- ✅ `BanListWidget` component — compact "Recent Bans & Restrictions" sidebar widget; embedded on listing detail pages and TCG Coach page
+- ✅ `/tools/news` — full news feed UI with game tabs + tag filter pills (Bans / Rotation / Tournament / New Sets); 3-column card grid; load-more pagination
+
+### Still to do
 
 - [ ] **10a.** **Reddit news scraper** — scheduled Vercel Cron job (daily) that hits the Reddit JSON API for the top posts from:
   - `r/PokemonTCG`, `r/PokemonTCGDeals` — bans, rotation, set reveals

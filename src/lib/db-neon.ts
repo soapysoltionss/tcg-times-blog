@@ -21,7 +21,7 @@
 import { neon } from "@neondatabase/serverless";
 import type { User } from "@/lib/xp";
 import { TASK_CATALOGUE, xpToLevel } from "@/lib/xp";
-import type { PostComment, Listing, ListingType, PostFrontmatter, Message, MessageThread, Dispute, DisputeStatus, ForumPost, ForumComment, ForumCategory } from "@/types/post";
+import type { PostComment, Listing, ListingType, PostFrontmatter, Message, MessageThread, Dispute, DisputeStatus, ForumPost, ForumComment, ForumCategory, SellerFeedback, FeedbackRating, NewsItem, NewsGame, NewsTag, NewsSource } from "@/types/post";
 import readingTime from "reading-time";
 
 export type { User };
@@ -1220,4 +1220,185 @@ export async function toggleForumUpvote(
       return { upvotes: Number(r[0]?.upvotes ?? 0), hasUpvoted: true };
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Seller Feedback (Problem 1b)
+// ---------------------------------------------------------------------------
+
+function rowToFeedback(row: Record<string, unknown>): SellerFeedback {
+  return {
+    id:             row.id as string,
+    listingId:      row.listing_id as string,
+    buyerId:        row.buyer_id as string,
+    buyerUsername:  row.buyer_username as string,
+    sellerId:       row.seller_id as string,
+    sellerUsername: row.seller_username as string,
+    rating:         row.rating as FeedbackRating,
+    note:           (row.note as string | null) ?? null,
+    createdAt:      (row.created_at as Date).toISOString(),
+  };
+}
+
+/** Leave feedback. One per (buyer, listing) pair — enforced by UNIQUE constraint. */
+export async function createFeedback(feedback: {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  rating: FeedbackRating;
+  note?: string;
+}): Promise<SellerFeedback> {
+  const db = sql();
+  const rows = await db`
+    INSERT INTO seller_feedback (id, listing_id, buyer_id, seller_id, rating, note)
+    VALUES (
+      ${feedback.id},
+      ${feedback.listingId},
+      ${feedback.buyerId},
+      ${feedback.sellerId},
+      ${feedback.rating},
+      ${feedback.note ?? null}
+    )
+    RETURNING
+      seller_feedback.*,
+      (SELECT username FROM users WHERE id = ${feedback.buyerId})  AS buyer_username,
+      (SELECT username FROM users WHERE id = ${feedback.sellerId}) AS seller_username
+  `;
+  return rowToFeedback(rows[0] as Record<string, unknown>);
+}
+
+/** Get all feedback for a seller. */
+export async function getFeedbackBySeller(sellerId: string): Promise<SellerFeedback[]> {
+  const db = sql();
+  const rows = await db`
+    SELECT
+      sf.*,
+      bu.username AS buyer_username,
+      su.username AS seller_username
+    FROM seller_feedback sf
+    JOIN users bu ON bu.id = sf.buyer_id
+    JOIN users su ON su.id = sf.seller_id
+    WHERE sf.seller_id = ${sellerId}
+    ORDER BY sf.created_at DESC
+  `;
+  return rows.map(r => rowToFeedback(r as Record<string, unknown>));
+}
+
+/** Get feedback summary counts for a seller. */
+export async function getFeedbackSummary(
+  sellerId: string
+): Promise<{ positive: number; neutral: number; negative: number; total: number }> {
+  const db = sql();
+  const rows = await db`
+    SELECT
+      count(*) FILTER (WHERE rating = 'positive') AS positive,
+      count(*) FILTER (WHERE rating = 'neutral')  AS neutral,
+      count(*) FILTER (WHERE rating = 'negative') AS negative,
+      count(*)                                     AS total
+    FROM seller_feedback
+    WHERE seller_id = ${sellerId}
+  `;
+  const r = rows[0] ?? {};
+  return {
+    positive: Number(r.positive ?? 0),
+    neutral:  Number(r.neutral  ?? 0),
+    negative: Number(r.negative ?? 0),
+    total:    Number(r.total    ?? 0),
+  };
+}
+
+/** Check if a buyer has already left feedback on a listing. */
+export async function hasFeedback(buyerId: string, listingId: string): Promise<boolean> {
+  const db = sql();
+  const rows = await db`
+    SELECT 1 FROM seller_feedback WHERE buyer_id = ${buyerId} AND listing_id = ${listingId} LIMIT 1
+  `;
+  return rows.length > 0;
+}
+
+// ---------------------------------------------------------------------------
+// News Items (Problem 10a / 10g)
+// ---------------------------------------------------------------------------
+
+function rowToNewsItem(row: Record<string, unknown>): NewsItem {
+  return {
+    id:          row.id as string,
+    game:        row.game as NewsGame,
+    source:      row.source as NewsSource,
+    subreddit:   (row.subreddit as string | null) ?? null,
+    title:       row.title as string,
+    url:         row.url as string,
+    summary:     (row.summary as string | null) ?? null,
+    publishedAt: (row.published_at as Date).toISOString(),
+    tags:        ((row.tags as string[]) ?? []) as NewsTag[],
+    createdAt:   (row.created_at as Date).toISOString(),
+  };
+}
+
+/** Bulk-upsert news items from the scraper. No-op on conflict (dedup by URL). */
+export async function upsertNewsItems(
+  items: Array<{
+    id: string;
+    game: NewsGame;
+    source: NewsSource;
+    subreddit?: string;
+    title: string;
+    url: string;
+    summary?: string;
+    publishedAt: string;
+    tags: NewsTag[];
+  }>
+): Promise<number> {
+  if (items.length === 0) return 0;
+  const db = sql();
+  let inserted = 0;
+  for (const item of items) {
+    const result = await db`
+      INSERT INTO news_items (id, game, source, subreddit, title, url, summary, published_at, tags)
+      VALUES (
+        ${item.id},
+        ${item.game},
+        ${item.source},
+        ${item.subreddit ?? null},
+        ${item.title},
+        ${item.url},
+        ${item.summary ?? null},
+        ${item.publishedAt},
+        ${item.tags}
+      )
+      ON CONFLICT (url) DO NOTHING
+    `;
+    if (result.length > 0) inserted++;
+  }
+  return inserted;
+}
+
+/** Query news items with optional game + tag filters. */
+export async function getNewsItems(opts?: {
+  game?: NewsGame | "all";
+  tag?: NewsTag;
+  limit?: number;
+  offset?: number;
+}): Promise<NewsItem[]> {
+  const db = sql();
+  const limit  = opts?.limit  ?? 50;
+  const offset = opts?.offset ?? 0;
+  const game   = opts?.game && opts.game !== "all" ? opts.game : null;
+  const tag    = opts?.tag ?? null;
+
+  const rows = await db`
+    SELECT *
+    FROM news_items
+    WHERE (${game}::text IS NULL OR game = ${game})
+      AND (${tag}::text IS NULL OR tags @> ARRAY[${tag}]::text[])
+    ORDER BY published_at DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+  return rows.map(r => rowToNewsItem(r as Record<string, unknown>));
+}
+
+/** Get the most recent ban-related items across all games (used by BanListWidget). */
+export async function getRecentBanNews(game?: NewsGame, limit = 5): Promise<NewsItem[]> {
+  return getNewsItems({ game: game ?? "all", tag: "ban", limit });
 }

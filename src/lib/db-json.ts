@@ -13,7 +13,7 @@ import matter from "gray-matter";
 import readingTime from "reading-time";
 import type { User } from "@/lib/xp";
 import { TASK_CATALOGUE, xpToLevel } from "@/lib/xp";
-import type { PostComment, Listing, PostFrontmatter, Message, MessageThread, Dispute, DisputeStatus } from "@/types/post";
+import type { PostComment, Listing, PostFrontmatter, Message, MessageThread, Dispute, DisputeStatus, SellerFeedback, FeedbackRating, NewsItem, NewsGame, NewsTag } from "@/types/post";
 import type { DbPost, DbPostMeta } from "@/lib/db-neon";
 
 export { TASK_CATALOGUE, xpToLevel };
@@ -459,4 +459,48 @@ export async function updateDisputeStatus(
   _id: string, _status: DisputeStatus, _resolution?: string
 ): Promise<Dispute | undefined> {
   return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Seller Feedback — not supported in JSON local dev
+// ---------------------------------------------------------------------------
+
+export async function createFeedback(_f: {
+  id: string; listingId: string; buyerId: string; sellerId: string;
+  rating: FeedbackRating; note?: string;
+}): Promise<SellerFeedback> {
+  throw new Error("Feedback requires Neon Postgres (DATABASE_URL).");
+}
+export async function getFeedbackBySeller(_sellerId: string): Promise<SellerFeedback[]> {
+  return [];
+}
+export async function getFeedbackSummary(
+  _sellerId: string
+): Promise<{ positive: number; neutral: number; negative: number; total: number }> {
+  return { positive: 0, neutral: 0, negative: 0, total: 0 };
+}
+export async function hasFeedback(_buyerId: string, _listingId: string): Promise<boolean> {
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// News Items — not supported in JSON local dev
+// ---------------------------------------------------------------------------
+
+export async function upsertNewsItems(
+  _items: Array<{
+    id: string; game: NewsGame; source: "reddit" | "official" | "fractalofin" | "discord";
+    subreddit?: string; title: string; url: string; summary?: string;
+    publishedAt: string; tags: NewsTag[];
+  }>
+): Promise<number> {
+  return 0;
+}
+export async function getNewsItems(_opts?: {
+  game?: NewsGame | "all"; tag?: NewsTag; limit?: number; offset?: number;
+}): Promise<NewsItem[]> {
+  return [];
+}
+export async function getRecentBanNews(_game?: NewsGame, _limit?: number): Promise<NewsItem[]> {
+  return [];
 }

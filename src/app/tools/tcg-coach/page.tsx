@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { MODEL_OPTIONS, TIER_META, type ModelChoice } from "@/lib/ai-coach";
+import { BanListWidget } from "@/components/BanListWidget";
 
 type Message = { role: "user" | "assistant"; content: string };
 type Intent = "rules" | "deckbuilding" | "prices" | "matchup" | "general";
@@ -401,6 +402,11 @@ export default function TcgCoachPage() {
             Clear
           </button>
         )}
+      </div>
+
+      {/* Ban list sidebar widget */}
+      <div className="mt-8">
+        <BanListWidget limit={5} title="Recent Bans & Restrictions" />
       </div>
     </div>
   );
