@@ -668,6 +668,54 @@ export async function getFeaturedDbPosts(limit = 3): Promise<DbPostMeta[]> {
   });
 }
 
+/**
+ * Returns the single post pinned to the homepage hero slider via
+ * heroFeatured: true in its frontmatter. Falls back to the most-recent
+ * featured post, then to the most-recent post overall.
+ */
+export async function getHeroFeaturedPost(): Promise<DbPostMeta | undefined> {
+  const db = sql();
+  // 1. Explicit heroFeatured pin
+  const heroRows = await db`
+    SELECT slug, frontmatter, content
+    FROM posts
+    WHERE frontmatter->>'heroFeatured' = 'true'
+    ORDER BY frontmatter->>'date' DESC
+    LIMIT 1
+  `;
+  if (heroRows.length > 0) {
+    const post = rowToPost(heroRows[0] as Record<string, unknown>);
+    const { content, freeContent, ...meta } = post;
+    return meta;
+  }
+  // 2. Fall back to most-recent featured post
+  const featRows = await db`
+    SELECT slug, frontmatter, content
+    FROM posts
+    WHERE frontmatter->>'featured' = 'true'
+    ORDER BY frontmatter->>'date' DESC
+    LIMIT 1
+  `;
+  if (featRows.length > 0) {
+    const post = rowToPost(featRows[0] as Record<string, unknown>);
+    const { content, freeContent, ...meta } = post;
+    return meta;
+  }
+  // 3. Fall back to most-recent post
+  const anyRows = await db`
+    SELECT slug, frontmatter, content
+    FROM posts
+    ORDER BY frontmatter->>'date' DESC
+    LIMIT 1
+  `;
+  if (anyRows.length > 0) {
+    const post = rowToPost(anyRows[0] as Record<string, unknown>);
+    const { content, freeContent, ...meta } = post;
+    return meta;
+  }
+  return undefined;
+}
+
 /** Insert or replace a post. Frontmatter is passed as a plain object. */
 export async function upsertPost(
   slug: string,

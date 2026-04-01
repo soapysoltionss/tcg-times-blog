@@ -333,6 +333,7 @@ export interface LatestSetInfo {
   game: string;
   gameEmoji: string;
   categoryId: number;
+  groupId: number;
   setName: string;
 }
 
@@ -365,6 +366,7 @@ export async function getLatestSets(): Promise<LatestSetInfo[]> {
         game:       g.slug,
         gameEmoji:  g.emoji,
         categoryId: g.categoryId,
+        groupId:    latest.groupId,
         setName:    latest.name,
       } satisfies LatestSetInfo;
     })

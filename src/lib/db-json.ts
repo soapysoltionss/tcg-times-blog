@@ -389,6 +389,15 @@ export async function getFeaturedDbPosts(limit = 3): Promise<DbPostMeta[]> {
   return (featured.length > 0 ? featured : all).slice(0, limit);
 }
 
+export async function getHeroFeaturedPost(): Promise<DbPostMeta | undefined> {
+  const all = await getAllDbPosts();
+  return (
+    all.find(p => p.heroFeatured) ??
+    all.find(p => p.featured) ??
+    all[0]
+  );
+}
+
 export async function upsertPost(
   slug: string,
   frontmatter: PostFrontmatter,

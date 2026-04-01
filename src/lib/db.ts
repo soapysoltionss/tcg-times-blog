@@ -160,6 +160,10 @@ export async function getFeaturedDbPosts(limit = 3): Promise<DbPostMeta[]> {
   return (await backend()).getFeaturedDbPosts(limit);
 }
 
+export async function getHeroFeaturedPost(): Promise<DbPostMeta | undefined> {
+  return (await backend()).getHeroFeaturedPost();
+}
+
 export async function upsertPost(
   slug: string,
   frontmatter: PostFrontmatter,

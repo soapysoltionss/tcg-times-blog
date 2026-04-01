@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { getFeaturedPosts, getAllPosts } from "@/lib/posts";
+import { getFeaturedPosts, getAllPosts, getHeroPost } from "@/lib/posts";
 import { gameCategories } from "@/config/site";
 import PostCard from "@/components/PostCard";
 import ArticleCarousel from "@/components/ArticleCarousel";
 import HeroSlider from "@/components/HeroSlider";
 import { getForumPosts, getListings } from "@/lib/db-neon";
 import { getLatestSets } from "@/lib/tcgplayer-prices";
-import type { LatestSet } from "@/components/HeroSlider";
-import type { TickerEvent } from "@/app/api/ticker/route";
+import type { LatestSet, MarketReportSnap } from "@/components/HeroSlider";
 
 export const revalidate = 300; // revalidate page every 5 minutes
 
@@ -15,7 +14,7 @@ export default async function HomePage() {
   const featured = await getFeaturedPosts(3);
   const latest = await getAllPosts();
   const latestSlice = latest.slice(0, 8);
-  const heroPost = featured[0] ?? latestSlice[0];
+  const heroPost = await getHeroPost().catch(() => featured[0] ?? latestSlice[0]);
   const gridPosts = featured.length > 1 ? featured.slice(1, 4) : latestSlice.slice(1, 4);
   // All posts for the carousel (up to 12), excluding the hero so there's no duplication
   const carouselPosts = latest.filter(p => p.slug !== heroPost?.slug).slice(0, 12);
@@ -27,20 +26,28 @@ export default async function HomePage() {
     getLatestSets().catch(() => []),
   ]);
 
-  // Build a "Market Insight" ticker event from the top sold listing
-  const topSold = soldListings.filter(l => l.sold).sort((a, b) =>
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  )[0] ?? soldListings[0] ?? null;
-  const topMover: TickerEvent | null = topSold
+  // Build a MarketReportSnap from the most recent sold listing
+  const recentSold = soldListings
+    .filter(l => l.sold)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const topSold = recentSold[0] ?? soldListings[0] ?? null;
+
+  const GAME_EMOJI: Record<string, string> = {
+    "flesh-and-blood": "⚔️",
+    "pokemon": "⚡",
+    "magic": "✨",
+    "one-piece": "🏴‍☠️",
+    "lorcana": "🌟",
+  };
+
+  const marketReport: MarketReportSnap | null = topSold
     ? {
-        id:        topSold.id,
-        kind:      "sold",
-        cardName:  topSold.cardName,
-        game:      topSold.game,
-        label:     `$${(topSold.priceCents / 100).toFixed(2)}`,
-        priceCents: topSold.priceCents,
-        imageUrl:  topSold.imageUrl,
-        listingId: topSold.id,
+        totalListings: soldListings.length,
+        topGame: topSold.game,
+        topGameEmoji: GAME_EMOJI[topSold.game] ?? "🃏",
+        topCardName: topSold.cardName,
+        topCardPriceCents: topSold.priceCents,
+        topCardImageUrl: topSold.imageUrl,
       }
     : null;
 
@@ -52,6 +59,7 @@ export default async function HomePage() {
     game:      s.game,
     gameEmoji: s.gameEmoji,
     setName:   s.setName,
+    groupId:   s.groupId,
   }));
 
   return (
@@ -59,7 +67,7 @@ export default async function HomePage() {
       {/* Hero slider — full-bleed auto-sliding hero */}
       <HeroSlider
         latestPost={heroPost ?? null}
-        topMover={topMover}
+        marketReport={marketReport}
         topForumPost={topForumPost}
         latestSets={latestSets}
       />

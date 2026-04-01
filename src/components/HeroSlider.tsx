@@ -18,7 +18,6 @@ import Link from "next/link";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import type { PostMeta, ForumPost } from "@/types/post";
-import type { TickerEvent } from "@/app/api/ticker/route";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,12 +25,24 @@ export type LatestSet = {
   game: string;
   gameEmoji: string;
   setName: string;
+  /** tcgcsv.com groupId — used to link to the set detail page */
+  groupId: number;
   imageUrl?: string;
+};
+
+/** Lightweight market report snapshot passed from the server */
+export type MarketReportSnap = {
+  totalListings: number;
+  topGame: string;
+  topGameEmoji: string;
+  topCardName: string;
+  topCardPriceCents: number;
+  topCardImageUrl?: string;
 };
 
 interface HeroSliderProps {
   latestPost:   PostMeta | null;
-  topMover:     TickerEvent | null;
+  marketReport: MarketReportSnap | null;
   topForumPost: ForumPost | null;
   latestSets:   LatestSet[];
 }
@@ -100,17 +111,16 @@ function ArticleSlide({ post }: { post: PostMeta }) {
   );
 }
 
-function MarketSlide({ event }: { event: TickerEvent }) {
-  const priceDollars = event.priceCents != null ? (event.priceCents / 100).toFixed(2) : null;
-  const isUp = (event.changePct ?? 0) >= 0;
+function MarketSlide({ report }: { report: MarketReportSnap }) {
+  const priceDollars = (report.topCardPriceCents / 100).toFixed(2);
   return (
     <div className="relative h-full min-h-[420px] md:min-h-[520px] overflow-hidden">
       {/* Background: card art blurred + darkened */}
-      {event.imageUrl ? (
+      {report.topCardImageUrl ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={event.imageUrl}
+            src={report.topCardImageUrl}
             alt=""
             className="absolute inset-0 w-full h-full object-cover scale-110 blur-sm"
             aria-hidden="true"
@@ -121,13 +131,13 @@ function MarketSlide({ event }: { event: TickerEvent }) {
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-emerald-800 to-emerald-600" />
       )}
 
-      {/* Card art (crisp, centred right) */}
-      {event.imageUrl && (
+      {/* Card art (crisp, positioned right) */}
+      {report.topCardImageUrl && (
         <div className="hidden md:flex absolute right-24 bottom-0 h-[85%] items-end justify-center pointer-events-none select-none">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={event.imageUrl}
-            alt={event.cardName}
+            src={report.topCardImageUrl}
+            alt={report.topCardName}
             className="h-full object-contain drop-shadow-2xl"
           />
         </div>
@@ -137,30 +147,29 @@ function MarketSlide({ event }: { event: TickerEvent }) {
       <div className="relative z-10 flex flex-col justify-end h-full max-w-4xl mx-auto px-8 md:px-12 pb-12 pt-20">
         <span className="label-upper text-xs text-white/70 tracking-widest mb-3 inline-flex items-center gap-2">
           <span className="w-6 h-px bg-white/50 inline-block" />
-          Market Insight
+          Market Report · {report.topGameEmoji} {report.topGame}
         </span>
         <h2
           className="text-3xl md:text-5xl font-black text-white leading-tight mb-3 drop-shadow"
           style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
         >
-          {event.cardName}
+          {report.topCardName}
         </h2>
-        <div className="flex items-center gap-3 mb-6">
-          {priceDollars && (
-            <span className="text-2xl font-bold text-white">${priceDollars}</span>
-          )}
-          {event.changePct != null && (
-            <span className={`label-upper text-xs px-2.5 py-1 font-bold ${isUp ? "bg-emerald-500 text-white" : "bg-red-500 text-white"}`}>
-              {isUp ? "▲" : "▼"} {Math.abs(event.changePct).toFixed(1)}%
-            </span>
-          )}
-          <span className="text-white/60 text-sm">{event.game}</span>
+        <div className="flex flex-wrap items-center gap-3 mb-2">
+          <span className="text-2xl font-bold text-white">${priceDollars}</span>
+          <span className="label-upper text-xs text-white/60 border border-white/30 px-2 py-0.5">
+            Highest listed
+          </span>
         </div>
+        <p className="text-white/60 text-sm max-w-lg mb-6">
+          {report.totalListings} active listing{report.totalListings !== 1 ? "s" : ""} on the marketplace.
+          Full market reports with price history, community sentiment &amp; Reddit trends are coming soon.
+        </p>
         <Link
           href="/tools/market"
           className="self-start label-upper text-xs px-6 py-3 bg-white text-black hover:bg-white/80 transition-colors"
         >
-          View Market →
+          View Market Index →
         </Link>
       </div>
     </div>
@@ -215,6 +224,8 @@ function ForumSlide({ post }: { post: ForumPost }) {
 
 function LatestSetSlide({ set }: { set: LatestSet }) {
   const gradient = gradientFor(set.game);
+  const gameName = set.game.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
+  const setHref = `/tools/market/set/${set.game}/${set.groupId}`;
   return (
     <div className="relative h-full min-h-[420px] md:min-h-[520px] overflow-hidden">
       {set.imageUrl ? (
@@ -226,7 +237,7 @@ function LatestSetSlide({ set }: { set: LatestSet }) {
             className="absolute inset-0 w-full h-full object-cover"
             aria-hidden="true"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
         </>
       ) : (
         <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} />
@@ -235,20 +246,32 @@ function LatestSetSlide({ set }: { set: LatestSet }) {
       <div className="relative z-10 flex flex-col justify-end h-full max-w-4xl mx-auto px-8 md:px-12 pb-12 pt-20">
         <span className="label-upper text-xs text-white/70 tracking-widest mb-3 inline-flex items-center gap-2">
           <span className="w-6 h-px bg-white/50 inline-block" />
-          Latest Release · {set.gameEmoji} {set.game.split("-").map(w => w[0].toUpperCase() + w.slice(1)).join(" ")}
+          Latest Release · {set.gameEmoji} {gameName}
         </span>
         <h2
-          className="text-3xl md:text-5xl font-black text-white leading-tight mb-6 drop-shadow"
+          className="text-3xl md:text-5xl font-black text-white leading-tight mb-3 drop-shadow"
           style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
         >
           {set.setName}
         </h2>
-        <Link
-          href={`/category/${set.game}`}
-          className="self-start label-upper text-xs px-6 py-3 bg-white text-black hover:bg-white/80 transition-colors"
-        >
-          See Cards →
-        </Link>
+        <p className="text-white/70 text-sm md:text-base max-w-xl mb-6 leading-relaxed">
+          Browse the full card list with TCGPlayer market prices. See which cards are leading
+          in value, check reprint risk ratings, and explore market insights for this set.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href={setHref}
+            className="self-start label-upper text-xs px-6 py-3 bg-white text-black hover:bg-white/80 transition-colors"
+          >
+            View Card List &amp; Prices →
+          </Link>
+          <Link
+            href={setHref + "#insights"}
+            className="self-start label-upper text-xs px-6 py-3 bg-white/10 text-white border border-white/30 hover:bg-white/20 transition-colors"
+          >
+            Market Insights →
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -258,21 +281,21 @@ function LatestSetSlide({ set }: { set: LatestSet }) {
 
 export default function HeroSlider({
   latestPost,
-  topMover,
+  marketReport,
   topForumPost,
   latestSets,
 }: HeroSliderProps) {
   // Build slide list
   type Slide =
     | { type: "article"; post: PostMeta }
-    | { type: "market";  event: TickerEvent }
+    | { type: "market";  report: MarketReportSnap }
     | { type: "forum";   post: ForumPost }
     | { type: "set";     set: LatestSet };
 
   const slides: Slide[] = [];
-  if (latestPost)   slides.push({ type: "article", post: latestPost });
-  if (topMover)     slides.push({ type: "market",  event: topMover });
-  if (topForumPost) slides.push({ type: "forum",   post: topForumPost });
+  if (latestPost)    slides.push({ type: "article", post: latestPost });
+  if (marketReport)  slides.push({ type: "market",  report: marketReport });
+  if (topForumPost)  slides.push({ type: "forum",   post: topForumPost });
   for (const s of latestSets) slides.push({ type: "set", set: s });
 
   // Always need at least 1 slide
@@ -311,7 +334,7 @@ export default function HeroSlider({
           {slides.map((slide, i) => (
             <div key={i} className="flex-[0_0_100%] min-w-0">
               {slide.type === "article" && <ArticleSlide post={slide.post} />}
-              {slide.type === "market"  && <MarketSlide event={slide.event} />}
+              {slide.type === "market"  && <MarketSlide report={slide.report} />}
               {slide.type === "forum"   && <ForumSlide post={slide.post} />}
               {slide.type === "set"     && <LatestSetSlide set={slide.set} />}
             </div>

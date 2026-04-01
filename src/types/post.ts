@@ -17,6 +17,12 @@ export type PostFrontmatter = {
   category: string;
   tags: string[];
   featured?: boolean;
+  /**
+   * When true, this post is pinned specifically to the homepage hero slider.
+   * Only one post should have this set at a time; the admin sets it via
+   * the post frontmatter. Falls back to featured[0] if none is set.
+   */
+  heroFeatured?: boolean;
   /** Pinned posts appear at the top of category and blog listing pages as "Start Here" articles */
   pinned?: boolean;
   paywalled?: boolean;

@@ -14,6 +14,7 @@ import {
   getDbPostsByCategory,
   getFeaturedDbPosts,
   getPinnedDbPosts,
+  getHeroFeaturedPost,
   upsertPost,
   deletePost,
 } from "@/lib/db";
@@ -82,6 +83,10 @@ export async function getPinnedPosts(category?: string) {
 
 export async function getFeaturedPosts(limit = 3) {
   return cachedGetFeaturedPosts(limit);
+}
+
+export async function getHeroPost() {
+  return getHeroFeaturedPost();
 }
 
 // ---------------------------------------------------------------------------
