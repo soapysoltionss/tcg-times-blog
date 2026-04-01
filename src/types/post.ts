@@ -113,6 +113,16 @@ export type Listing = {
    * Used to surface cross-region market insights in the AI coach.
    */
   sellerRegion?: string;
+  /**
+   * City/suburb of the seller, populated from their profile at listing time.
+   * Only present when the seller has set a city and marked the listing as local pickup.
+   */
+  sellerCity?: string;
+  /**
+   * True if the seller is willing to do a local pickup / meetup trade.
+   * Buyers can filter by this to find sellers in their area.
+   */
+  localPickup?: boolean;
 };
 
 // ---------------------------------------------------------------------------

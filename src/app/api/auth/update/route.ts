@@ -15,12 +15,17 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { firstName, lastName, email, currentPassword, newPassword, region, additionalRegions } = body;
+  const { firstName, lastName, email, currentPassword, newPassword, region, additionalRegions, city } = body;
 
   // Update basic fields
   if (firstName !== undefined) user.firstName = firstName.trim();
   if (lastName !== undefined) user.lastName = lastName.trim();
   if (email !== undefined) user.email = email.trim();
+
+  // City / suburb for local pickup
+  if (city !== undefined) {
+    user.city = typeof city === "string" && city.trim() ? city.trim() : undefined;
+  }
 
   // Region update — validate against known codes (allow "GLOBAL" for stores)
   if (region !== undefined) {

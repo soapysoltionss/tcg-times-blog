@@ -108,6 +108,7 @@ export async function getListings(opts?: {
   sellerId?: string;
   includeSold?: boolean;
   listingType?: ListingType;
+  localOnly?: boolean;
 }): Promise<Listing[]> {
   return (await backend()).getListings(opts);
 }

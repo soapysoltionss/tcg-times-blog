@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "All Posts",
+  title: "All Articles",
   description: "Browse all TCG Times articles — card theories, strategy guides, and community discussion.",
 };
 

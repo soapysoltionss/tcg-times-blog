@@ -21,12 +21,14 @@ export async function GET(req: NextRequest) {
   const game = searchParams.get("game") ?? undefined;
   const cardName = searchParams.get("card") ?? undefined;
   const listingType = searchParams.get("listingType") as ListingType | null;
+  const localOnly = searchParams.get("localOnly") === "true";
 
   const listings = await getListings({
     marketplace: marketplace ?? undefined,
     game,
     cardName,
     listingType: listingType ?? undefined,
+    localOnly,
   });
 
   return NextResponse.json({ listings });
@@ -51,7 +53,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { cardName, setName, game, condition, conditionNotes, priceCents, quantity, imageUrl, description, listingType } = body;
+  const { cardName, setName, game, condition, conditionNotes, priceCents, quantity, imageUrl, description, listingType, localPickup } = body;
 
   if (!cardName || typeof cardName !== "string" || cardName.trim().length < 1) {
     return NextResponse.json({ error: "Card/product name is required" }, { status: 400 });
@@ -98,6 +100,8 @@ export async function POST(req: NextRequest) {
     imageUrl: typeof imageUrl === "string" && imageUrl.trim() ? imageUrl.trim() : undefined,
     description: typeof description === "string" && description.trim() ? description.trim() : undefined,
     sellerRegion: user.region ?? undefined,
+    sellerCity: user.city ?? undefined,
+    localPickup: localPickup === true,
     createdAt: new Date().toISOString(),
     sold: false,
   } satisfies Omit<Listing, "sellerUsername" | "sellerAvatarUrl">);

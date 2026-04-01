@@ -343,6 +343,9 @@ function rowToListing(row: Record<string, unknown>): Listing {
     description:      row.description as string | undefined,
     createdAt:        (row.created_at as Date).toISOString(),
     sold:             row.sold as boolean,
+    sellerRegion:     row.seller_region as string | undefined,
+    sellerCity:       row.seller_city as string | undefined,
+    localPickup:      (row.local_pickup as boolean) ?? false,
   };
 }
 
@@ -353,6 +356,7 @@ export async function getListings(opts?: {
   sellerId?: string;
   includeSold?: boolean;
   listingType?: ListingType;
+  localOnly?: boolean;
 }): Promise<Listing[]> {
   const db = sql();
   const marketplace = opts?.marketplace ?? null;
@@ -361,6 +365,7 @@ export async function getListings(opts?: {
   const sellerId = opts?.sellerId ?? null;
   const includeSold = opts?.includeSold ?? false;
   const listingType = opts?.listingType ?? null;
+  const localOnly = opts?.localOnly ?? false;
 
   const rows = await db`
     SELECT
@@ -389,7 +394,10 @@ export async function getListings(opts?: {
       l.image_url,
       l.description,
       l.created_at,
-      l.sold
+      l.sold,
+      l.seller_region,
+      l.seller_city,
+      l.local_pickup
     FROM listings l
     JOIN users u ON u.id = l.seller_id
     WHERE (${marketplace}::text IS NULL OR l.marketplace = ${marketplace})
@@ -398,6 +406,7 @@ export async function getListings(opts?: {
       AND (${sellerId}::text IS NULL OR l.seller_id = ${sellerId})
       AND (${listingType}::text IS NULL OR COALESCE(l.listing_type, 'card') = ${listingType})
       AND (${includeSold} OR l.sold = false)
+      AND (NOT ${localOnly} OR l.local_pickup = true)
     ORDER BY l.created_at DESC
   `;
   return rows.map((r) => rowToListing(r as Record<string, unknown>));
@@ -432,7 +441,10 @@ export async function getListingById(id: string): Promise<Listing | undefined> {
       l.image_url,
       l.description,
       l.created_at,
-      l.sold
+      l.sold,
+      l.seller_region,
+      l.seller_city,
+      l.local_pickup
     FROM listings l
     JOIN users u ON u.id = l.seller_id
     WHERE l.id = ${id}
@@ -446,7 +458,7 @@ export async function createListing(listing: Omit<Listing, "sellerUsername" | "s
   await db`
     INSERT INTO listings
       (id, seller_id, marketplace, listing_type, card_name, set_name, game, condition, condition_notes,
-       price_cents, quantity, image_url, description, sold)
+       price_cents, quantity, image_url, description, sold, seller_region, seller_city, local_pickup)
     VALUES (
       ${listing.id},
       ${listing.sellerId},
@@ -461,7 +473,10 @@ export async function createListing(listing: Omit<Listing, "sellerUsername" | "s
       ${listing.quantity},
       ${listing.imageUrl ?? null},
       ${listing.description ?? null},
-      ${listing.sold}
+      ${listing.sold},
+      ${listing.sellerRegion ?? null},
+      ${listing.sellerCity ?? null},
+      ${listing.localPickup ?? false}
     )
   `;
   const created = await getListingById(listing.id);

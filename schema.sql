@@ -204,3 +204,9 @@ ALTER TABLE listings ADD COLUMN IF NOT EXISTS seller_region TEXT;
 CREATE INDEX IF NOT EXISTS idx_users_region   ON users (region) WHERE region IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_listings_region ON listings (seller_region) WHERE seller_region IS NOT NULL;
 
+-- Problem 7: local P2P selling — city on users, seller_city + local_pickup on listings
+ALTER TABLE users    ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS seller_city  TEXT;
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS local_pickup BOOLEAN NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_listings_local ON listings (local_pickup) WHERE local_pickup = true;

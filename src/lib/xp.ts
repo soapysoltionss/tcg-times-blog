@@ -106,6 +106,12 @@ export type User = {
    * e.g. ["SG", "MY"] = operates in both Singapore and Malaysia
    */
   additionalRegions?: string[];
+  /**
+   * City or suburb for local pickup listings.
+   * e.g. "Singapore", "Melbourne CBD", "Tokyo"
+   * Displayed on listings where localPickup = true so buyers can find local sellers.
+   */
+  city?: string;
 };
 
 // ---------------------------------------------------------------------------

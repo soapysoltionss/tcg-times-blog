@@ -226,6 +226,12 @@ function ListingCard({ listing }: { listing: Listing }) {
           <span className="label-upper text-[10px] text-[var(--text-muted)]">×{listing.quantity}</span>
         </div>
 
+        {listing.localPickup && listing.sellerCity && (
+          <span className="label-upper text-[10px] text-[var(--text-muted)] flex items-center gap-1 mt-0.5">
+            📍 {listing.sellerCity}
+          </span>
+        )}
+
         <div className="mt-auto pt-3 flex items-end justify-between gap-2">
           <span className="text-xl font-black text-[var(--foreground)]" style={{ fontFamily: "var(--font-serif, serif)" }}>
             {formatPrice(listing.priceCents)}
@@ -434,11 +440,13 @@ interface FilterPanelProps {
   setGame: (v: string) => void;
   showSoldOut: boolean;
   setShowSoldOut: (v: boolean) => void;
+  localOnly: boolean;
+  setLocalOnly: (v: boolean) => void;
 }
 
 function FilterPanel({
   tab, storeSource, setStoreSource, productType, setProductType,
-  game, setGame, showSoldOut, setShowSoldOut,
+  game, setGame, showSoldOut, setShowSoldOut, localOnly, setLocalOnly,
 }: FilterPanelProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -458,6 +466,7 @@ function FilterPanel({
     productType !== "",
     game !== "",
     showSoldOut,
+    localOnly,
   ].filter(Boolean).length;
 
   return (
@@ -567,6 +576,26 @@ function FilterPanel({
             </div>
           )}
 
+          {/* Local pickup only toggle */}
+          <div className="flex items-center justify-between pt-1 border-t border-[var(--border)]">
+            <div className="flex flex-col gap-0.5">
+              <span className="label-upper text-[10px] text-[var(--text-muted)]">📍 Local pickup only</span>
+              <span className="text-[10px] text-[var(--text-muted)] opacity-70">Show sellers offering in-person meetup</span>
+            </div>
+            <button
+              onClick={() => setLocalOnly(!localOnly)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none shrink-0 ml-3 ${
+                localOnly ? "bg-[var(--foreground)]" : "bg-[var(--border-strong)]"
+              }`}
+            >
+              <span
+                className={`inline-block h-3.5 w-3.5 rounded-full bg-[var(--background)] transition-transform ${
+                  localOnly ? "translate-x-4" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
           {/* Clear all */}
           {activeCount > 0 && (
             <button
@@ -575,6 +604,7 @@ function FilterPanel({
                 setProductType("");
                 setGame("");
                 setShowSoldOut(false);
+                setLocalOnly(false);
               }}
               className="label-upper text-[10px] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors underline underline-offset-2 text-left"
             >
@@ -599,6 +629,7 @@ function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
   const [game, setGame] = useState("flesh-and-blood");
   const [condition, setCondition] = useState<ListingCondition>("Near Mint");
   const [conditionNotes, setConditionNotes] = useState("");
+  const [localPickup, setLocalPickup] = useState(false);
   const [priceStr, setPriceStr] = useState("");
   const [priceSuggestion, setPriceSuggestion] = useState<number | null>(null);
   const [quantity, setQuantity] = useState("1");
@@ -638,6 +669,7 @@ function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
         priceCents: price,
         quantity: parseInt(quantity, 10) || 1,
         imageUrl: imageUrl || undefined,
+        localPickup,
       }),
     });
     const data = await res.json();
@@ -812,6 +844,20 @@ function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
             </label>
           )}
 
+          {/* Local pickup toggle */}
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={localPickup}
+              onChange={(e) => setLocalPickup(e.target.checked)}
+              className="w-4 h-4 accent-[var(--foreground)]"
+            />
+            <div>
+              <span className="label-upper text-[10px] text-[var(--foreground)]">📍 Local Pickup Available</span>
+              <p className="text-[10px] text-[var(--text-muted)] mt-0.5">Buyers can meet you in person. Your city will be shown on the listing.</p>
+            </div>
+          </label>
+
           <div className="grid grid-cols-2 gap-4">
             <label className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
@@ -876,6 +922,7 @@ export default function MarketplacePage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   // Hide sold-out products by default; revealed via filter toggle or when searching
   const [showSoldOut, setShowSoldOut] = useState(false);
+  const [localOnly, setLocalOnly] = useState(false);
 
   // Check login state
   useEffect(() => {
@@ -928,7 +975,8 @@ export default function MarketplacePage() {
 
   const showJeux = tab === "store" && (storeSource === "all" || storeSource === "jeux");
   const showTcgTimes = storeSource !== "jeux" || tab === "community";
-  const hasAnyResults = (showTcgTimes && listings.length > 0) || (showJeux && jeuxProducts.length > 0);
+  const filteredListings = localOnly ? listings.filter((l) => l.localPickup) : listings;
+  const hasAnyResults = (showTcgTimes && filteredListings.length > 0) || (showJeux && jeuxProducts.length > 0);
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-10 py-10">
@@ -986,6 +1034,8 @@ export default function MarketplacePage() {
           setGame={setGame}
           showSoldOut={showSoldOut}
           setShowSoldOut={setShowSoldOut}
+          localOnly={localOnly}
+          setLocalOnly={setLocalOnly}
         />
         {/* Active filter chips */}
         {storeSource !== "all" && tab === "store" && (
@@ -1010,6 +1060,12 @@ export default function MarketplacePage() {
           <span className="flex items-center gap-1 label-upper text-[10px] px-2.5 py-1.5 bg-[var(--muted)] border border-[var(--border)] text-[var(--foreground)]">
             Incl. sold out
             <button onClick={() => setShowSoldOut(false)} className="ml-0.5 opacity-50 hover:opacity-100">✕</button>
+          </span>
+        )}
+        {localOnly && (
+          <span className="flex items-center gap-1 label-upper text-[10px] px-2.5 py-1.5 bg-[var(--muted)] border border-[var(--border)] text-[var(--foreground)]">
+            📍 Local pickup
+            <button onClick={() => setLocalOnly(false)} className="ml-0.5 opacity-50 hover:opacity-100">✕</button>
           </span>
         )}
       </div>
@@ -1072,8 +1128,7 @@ export default function MarketplacePage() {
             </div>
           )}
 
-          {/* TCG Times listings */}
-          {showTcgTimes && listings.length > 0 && (
+          {showTcgTimes && filteredListings.length > 0 && (
             <div>
               {storeSource === "all" && tab === "store" && (
                 <div className="flex items-center gap-3 mb-4">
@@ -1081,13 +1136,22 @@ export default function MarketplacePage() {
                     TCG Times Sellers
                   </span>
                   <span className="text-[10px] text-[var(--text-muted)]">
-                    {listings.length} listing{listings.length !== 1 ? "s" : ""}
+                    {filteredListings.length} listing{filteredListings.length !== 1 ? "s" : ""}
                   </span>
                 </div>
               )}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {listings.map((l) => <ListingCard key={l.id} listing={l} />)}
+                {filteredListings.map((l) => <ListingCard key={l.id} listing={l} />)}
               </div>
+              {localOnly && (
+                <p className="mt-4 text-[11px] text-[var(--text-muted)]">
+                  🛡️ Meeting a stranger? Read our{" "}
+                  <a href="/tools/local-meetup" className="underline underline-offset-2 hover:text-[var(--foreground)] transition-colors">
+                    local meetup safety guide
+                  </a>
+                  .
+                </p>
+              )}
             </div>
           )}
         </div>

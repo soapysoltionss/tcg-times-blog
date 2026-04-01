@@ -319,6 +319,7 @@ function ProfilePageInner() {
   const [email, setEmail] = useState("");
   const [region, setRegion] = useState("");
   const [additionalRegions, setAdditionalRegions] = useState<string[]>([]);
+  const [city, setCity] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -347,6 +348,7 @@ function ProfilePageInner() {
         setEmail(user.email ?? "");
         setRegion(user.region ?? "");
         setAdditionalRegions(user.additionalRegions ?? []);
+        setCity(user.city ?? "");
       })
       .finally(() => setLoading(false));
 
@@ -379,7 +381,7 @@ function ProfilePageInner() {
     setSaveError("");
     setSaveSuccess(false);
 
-    const body: Record<string, unknown> = { firstName, lastName, email, region, additionalRegions };
+    const body: Record<string, unknown> = { firstName, lastName, email, region, additionalRegions, city };
     if (newPassword) {
       body.currentPassword = currentPassword;
       body.newPassword = newPassword;
@@ -692,6 +694,24 @@ function ProfilePageInner() {
             </select>
             <p className="text-[10px] text-[var(--text-muted)]">
               Used to tailor AI coaching advice, pricing references, and marketplace insights.
+            </p>
+          </div>
+
+          {/* City / suburb for local pickup */}
+          <div className="flex flex-col gap-1.5">
+            <label className="label-upper text-[10px] text-[var(--text-muted)]">
+              City / Suburb <span className="opacity-50">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="e.g. Singapore, Melbourne CBD, Tokyo"
+              maxLength={100}
+              className="border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] px-3 py-2.5 text-sm focus:border-[var(--border-strong)] outline-none"
+            />
+            <p className="text-[10px] text-[var(--text-muted)]">
+              Shown on listings where you offer local pickup or meetup.
             </p>
           </div>
 
