@@ -159,3 +159,46 @@ export type Dispute = {
   updatedAt: string;
 };
 
+// ---------------------------------------------------------------------------
+// Forum
+// ---------------------------------------------------------------------------
+
+export type ForumCategory =
+  | "grand-archive"
+  | "flesh-and-blood"
+  | "one-piece-tcg"
+  | "general";
+
+export type ForumPost = {
+  id: string;
+  authorId: string;
+  authorUsername: string;
+  authorAvatarUrl?: string;
+  category: ForumCategory;
+  title: string;
+  body: string;
+  flair?: string | null;
+  upvotes: number;
+  commentCount: number;
+  /** True if the current viewer has upvoted this post */
+  viewerHasUpvoted?: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ForumComment = {
+  id: string;
+  postId: string;
+  authorId: string;
+  authorUsername: string;
+  authorAvatarUrl?: string;
+  body: string;
+  parentCommentId?: string | null;
+  upvotes: number;
+  /** True if the current viewer has upvoted this comment */
+  viewerHasUpvoted?: boolean;
+  /** Nested replies (one level deep on the client) */
+  replies?: ForumComment[];
+  createdAt: string;
+};
+

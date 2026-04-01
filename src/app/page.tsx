@@ -3,6 +3,13 @@ import { getFeaturedPosts, getAllPosts } from "@/lib/posts";
 import { gameCategories } from "@/config/site";
 import PostCard from "@/components/PostCard";
 import ArticleCarousel from "@/components/ArticleCarousel";
+import HeroSlider from "@/components/HeroSlider";
+import { getForumPosts, getListings } from "@/lib/db-neon";
+import { getLatestSets } from "@/lib/tcgplayer-prices";
+import type { LatestSet } from "@/components/HeroSlider";
+import type { TickerEvent } from "@/app/api/ticker/route";
+
+export const revalidate = 300; // revalidate page every 5 minutes
 
 export default async function HomePage() {
   const featured = await getFeaturedPosts(3);
@@ -13,40 +20,49 @@ export default async function HomePage() {
   // All posts for the carousel (up to 12), excluding the hero so there's no duplication
   const carouselPosts = latest.filter(p => p.slug !== heroPost?.slug).slice(0, 12);
 
+  // Fetch slider data in parallel — failures are silenced so the page never breaks
+  const [soldListings, forumPosts, latestSetInfos] = await Promise.all([
+    getListings({ includeSold: true }).catch(() => []),
+    getForumPosts({ sort: "hot", limit: 1 }).catch(() => []),
+    getLatestSets().catch(() => []),
+  ]);
+
+  // Build a "Market Insight" ticker event from the top sold listing
+  const topSold = soldListings.filter(l => l.sold).sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )[0] ?? soldListings[0] ?? null;
+  const topMover: TickerEvent | null = topSold
+    ? {
+        id:        topSold.id,
+        kind:      "sold",
+        cardName:  topSold.cardName,
+        game:      topSold.game,
+        label:     `$${(topSold.priceCents / 100).toFixed(2)}`,
+        priceCents: topSold.priceCents,
+        imageUrl:  topSold.imageUrl,
+        listingId: topSold.id,
+      }
+    : null;
+
+  // Top forum post (hot)
+  const topForumPost = forumPosts[0] ?? null;
+
+  // Latest sets — map to LatestSet shape used by HeroSlider
+  const latestSets: LatestSet[] = latestSetInfos.map(s => ({
+    game:      s.game,
+    gameEmoji: s.gameEmoji,
+    setName:   s.setName,
+  }));
+
   return (
     <div>
-      {/* Hero — full-width editorial banner */}
-      {heroPost && (
-        <section className="border-b border-[var(--border-strong)]">
-          <div className="max-w-7xl mx-auto px-6 lg:px-10 py-16 md:py-24 grid md:grid-cols-2 gap-12 items-end">
-            <div>
-              <span className="label-upper text-[var(--text-muted)] block mb-4">
-                {gameCategories.find(c => c.slug === heroPost.category)?.name ?? "Featured"}
-              </span>
-              <h2
-                className="text-4xl md:text-6xl font-black text-[var(--foreground)] leading-none tracking-tight mb-6"
-                style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
-              >
-                {heroPost.title}
-              </h2>
-              <Link
-                href={`/blog/${heroPost.slug}`}
-                className="inline-flex items-center gap-2 bg-[var(--foreground)] text-[var(--background)] label-upper px-6 py-3 hover:opacity-70 transition-opacity"
-              >
-                Read Article →
-              </Link>
-            </div>
-            <div>
-              <p className="text-lg text-[var(--text-muted)] leading-relaxed mb-6">{heroPost.excerpt}</p>
-              <div className="flex items-center gap-3">
-                <span className="label-upper text-[var(--text-muted)]">{heroPost.author}</span>
-                <span className="text-[var(--border)]">·</span>
-                <span className="label-upper text-[var(--text-muted)]">{heroPost.readingTime}</span>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
+      {/* Hero slider — full-bleed auto-sliding hero */}
+      <HeroSlider
+        latestPost={heroPost ?? null}
+        topMover={topMover}
+        topForumPost={topForumPost}
+        latestSets={latestSets}
+      />
 
       {/* Article carousel — immediately below the hero */}
       {carouselPosts.length > 0 && (

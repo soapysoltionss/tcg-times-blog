@@ -21,7 +21,7 @@
 import { neon } from "@neondatabase/serverless";
 import type { User } from "@/lib/xp";
 import { TASK_CATALOGUE, xpToLevel } from "@/lib/xp";
-import type { PostComment, Listing, ListingType, PostFrontmatter, Message, MessageThread, Dispute, DisputeStatus } from "@/types/post";
+import type { PostComment, Listing, ListingType, PostFrontmatter, Message, MessageThread, Dispute, DisputeStatus, ForumPost, ForumComment, ForumCategory } from "@/types/post";
 import readingTime from "reading-time";
 
 export type { User };
@@ -901,4 +901,260 @@ export async function updateDisputeStatus(
       (SELECT username FROM users WHERE id = disputes.seller_id) AS seller_username
   `;
   return rows[0] ? rowToDispute(rows[0] as Record<string, unknown>) : undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Forum helpers
+// ---------------------------------------------------------------------------
+
+function rowToForumPost(row: Record<string, unknown>, viewerUpvotes?: Set<string>): ForumPost {
+  return {
+    id:              row.id as string,
+    authorId:        row.author_id as string,
+    authorUsername:  row.author_username as string,
+    authorAvatarUrl: (row.author_avatar_url as string | null) ?? undefined,
+    category:        row.category as ForumCategory,
+    title:           row.title as string,
+    body:            row.body as string,
+    flair:           (row.flair as string | null) ?? null,
+    upvotes:         Number(row.upvotes),
+    commentCount:    Number(row.comment_count),
+    viewerHasUpvoted: viewerUpvotes ? viewerUpvotes.has(row.id as string) : false,
+    createdAt:       (row.created_at as Date).toISOString(),
+    updatedAt:       (row.updated_at as Date).toISOString(),
+  };
+}
+
+function rowToForumComment(row: Record<string, unknown>, viewerUpvotes?: Set<string>): ForumComment {
+  return {
+    id:               row.id as string,
+    postId:           row.post_id as string,
+    authorId:         row.author_id as string,
+    authorUsername:   row.author_username as string,
+    authorAvatarUrl:  (row.author_avatar_url as string | null) ?? undefined,
+    body:             row.body as string,
+    parentCommentId:  (row.parent_comment_id as string | null) ?? null,
+    upvotes:          Number(row.upvotes),
+    viewerHasUpvoted: viewerUpvotes ? viewerUpvotes.has(row.id as string) : false,
+    createdAt:        (row.created_at as Date).toISOString(),
+  };
+}
+
+export async function getForumPosts(opts?: {
+  category?: string;
+  limit?: number;
+  offset?: number;
+  sort?: "new" | "hot";
+  viewerUserId?: string;
+}): Promise<ForumPost[]> {
+  const db = sql();
+  const limit  = opts?.limit  ?? 30;
+  const offset = opts?.offset ?? 0;
+
+  // Fetch viewer upvotes if logged in
+  let viewerUpvotes = new Set<string>();
+  if (opts?.viewerUserId) {
+    const uRows = await db`
+      SELECT target_id FROM forum_upvotes
+      WHERE user_id = ${opts.viewerUserId} AND target_type = 'post'
+    `;
+    viewerUpvotes = new Set(uRows.map(r => r.target_id as string));
+  }
+
+  let rows;
+  if (opts?.category && opts.category !== "all") {
+    if (opts?.sort === "hot") {
+      rows = await db`
+        SELECT fp.*, u.username AS author_username, u.data->>'avatarUrl' AS author_avatar_url
+        FROM forum_posts fp
+        JOIN users u ON u.id = fp.author_id
+        WHERE fp.category = ${opts.category}
+        ORDER BY (fp.upvotes + fp.comment_count * 2) DESC, fp.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else {
+      rows = await db`
+        SELECT fp.*, u.username AS author_username, u.data->>'avatarUrl' AS author_avatar_url
+        FROM forum_posts fp
+        JOIN users u ON u.id = fp.author_id
+        WHERE fp.category = ${opts.category}
+        ORDER BY fp.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    }
+  } else {
+    if (opts?.sort === "hot") {
+      rows = await db`
+        SELECT fp.*, u.username AS author_username, u.data->>'avatarUrl' AS author_avatar_url
+        FROM forum_posts fp
+        JOIN users u ON u.id = fp.author_id
+        ORDER BY (fp.upvotes + fp.comment_count * 2) DESC, fp.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else {
+      rows = await db`
+        SELECT fp.*, u.username AS author_username, u.data->>'avatarUrl' AS author_avatar_url
+        FROM forum_posts fp
+        JOIN users u ON u.id = fp.author_id
+        ORDER BY fp.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    }
+  }
+
+  return rows.map(r => rowToForumPost(r as Record<string, unknown>, viewerUpvotes));
+}
+
+export async function getForumPostById(id: string, viewerUserId?: string): Promise<ForumPost | undefined> {
+  const db = sql();
+  const rows = await db`
+    SELECT fp.*, u.username AS author_username, u.data->>'avatarUrl' AS author_avatar_url
+    FROM forum_posts fp
+    JOIN users u ON u.id = fp.author_id
+    WHERE fp.id = ${id}
+    LIMIT 1
+  `;
+  if (!rows[0]) return undefined;
+
+  let viewerUpvotes = new Set<string>();
+  if (viewerUserId) {
+    const uRows = await db`
+      SELECT target_id FROM forum_upvotes
+      WHERE user_id = ${viewerUserId} AND target_type = 'post' AND target_id = ${id}
+    `;
+    viewerUpvotes = new Set(uRows.map(r => r.target_id as string));
+  }
+
+  return rowToForumPost(rows[0] as Record<string, unknown>, viewerUpvotes);
+}
+
+export async function createForumPost(post: {
+  id: string;
+  authorId: string;
+  category: string;
+  title: string;
+  body: string;
+  flair?: string;
+}): Promise<ForumPost> {
+  const db = sql();
+  const rows = await db`
+    INSERT INTO forum_posts (id, author_id, category, title, body, flair)
+    VALUES (${post.id}, ${post.authorId}, ${post.category}, ${post.title}, ${post.body}, ${post.flair ?? null})
+    RETURNING *
+  `;
+  const row = rows[0] as Record<string, unknown>;
+  // Fetch username
+  const uRows = await db`SELECT username, data->>'avatarUrl' AS avatar_url FROM users WHERE id = ${post.authorId} LIMIT 1`;
+  return rowToForumPost({
+    ...row,
+    author_username:  uRows[0]?.username,
+    author_avatar_url: uRows[0]?.avatar_url,
+  } as Record<string, unknown>);
+}
+
+export async function deleteForumPost(id: string, authorId: string): Promise<boolean> {
+  const db = sql();
+  const rows = await db`
+    DELETE FROM forum_posts WHERE id = ${id} AND author_id = ${authorId} RETURNING id
+  `;
+  return rows.length > 0;
+}
+
+export async function getForumComments(postId: string, viewerUserId?: string): Promise<ForumComment[]> {
+  const db = sql();
+  const rows = await db`
+    SELECT fc.*, u.username AS author_username, u.data->>'avatarUrl' AS author_avatar_url
+    FROM forum_comments fc
+    JOIN users u ON u.id = fc.author_id
+    WHERE fc.post_id = ${postId}
+    ORDER BY fc.created_at ASC
+  `;
+
+  let viewerUpvotes = new Set<string>();
+  if (viewerUserId) {
+    const uRows = await db`
+      SELECT target_id FROM forum_upvotes
+      WHERE user_id = ${viewerUserId} AND target_type = 'comment'
+    `;
+    viewerUpvotes = new Set(uRows.map(r => r.target_id as string));
+  }
+
+  const allComments = rows.map(r => rowToForumComment(r as Record<string, unknown>, viewerUpvotes));
+
+  // Build threaded structure (one level deep)
+  const roots: ForumComment[] = [];
+  const byId = new Map<string, ForumComment>();
+  for (const c of allComments) {
+    byId.set(c.id, { ...c, replies: [] });
+  }
+  for (const c of byId.values()) {
+    if (c.parentCommentId) {
+      byId.get(c.parentCommentId)?.replies?.push(c);
+    } else {
+      roots.push(c);
+    }
+  }
+  return roots;
+}
+
+export async function createForumComment(comment: {
+  id: string;
+  postId: string;
+  authorId: string;
+  body: string;
+  parentCommentId?: string;
+}): Promise<ForumComment> {
+  const db = sql();
+  const rows = await db`
+    INSERT INTO forum_comments (id, post_id, author_id, body, parent_comment_id)
+    VALUES (${comment.id}, ${comment.postId}, ${comment.authorId}, ${comment.body}, ${comment.parentCommentId ?? null})
+    RETURNING *
+  `;
+  // Increment comment_count on the post
+  await db`UPDATE forum_posts SET comment_count = comment_count + 1 WHERE id = ${comment.postId}`;
+  const uRows = await db`SELECT username, data->>'avatarUrl' AS avatar_url FROM users WHERE id = ${comment.authorId} LIMIT 1`;
+  return rowToForumComment({
+    ...(rows[0] as Record<string, unknown>),
+    author_username:   uRows[0]?.username,
+    author_avatar_url: uRows[0]?.avatar_url,
+  } as Record<string, unknown>);
+}
+
+export async function toggleForumUpvote(
+  userId: string,
+  targetId: string,
+  targetType: "post" | "comment"
+): Promise<{ upvotes: number; hasUpvoted: boolean }> {
+  const db = sql();
+
+  // Check if upvote exists
+  const existing = await db`
+    SELECT 1 FROM forum_upvotes WHERE user_id = ${userId} AND target_id = ${targetId}
+  `;
+
+  if (existing.length > 0) {
+    // Remove upvote
+    await db`DELETE FROM forum_upvotes WHERE user_id = ${userId} AND target_id = ${targetId}`;
+    if (targetType === "post") {
+      const r = await db`UPDATE forum_posts    SET upvotes = GREATEST(upvotes - 1, 0) WHERE id = ${targetId} RETURNING upvotes`;
+      return { upvotes: Number(r[0]?.upvotes ?? 0), hasUpvoted: false };
+    } else {
+      const r = await db`UPDATE forum_comments SET upvotes = GREATEST(upvotes - 1, 0) WHERE id = ${targetId} RETURNING upvotes`;
+      return { upvotes: Number(r[0]?.upvotes ?? 0), hasUpvoted: false };
+    }
+  } else {
+    // Add upvote
+    await db`
+      INSERT INTO forum_upvotes (user_id, target_id, target_type)
+      VALUES (${userId}, ${targetId}, ${targetType})
+      ON CONFLICT DO NOTHING
+    `;
+    if (targetType === "post") {
+      const r = await db`UPDATE forum_posts    SET upvotes = upvotes + 1 WHERE id = ${targetId} RETURNING upvotes`;
+      return { upvotes: Number(r[0]?.upvotes ?? 0), hasUpvoted: true };
+    } else {
+      const r = await db`UPDATE forum_comments SET upvotes = upvotes + 1 WHERE id = ${targetId} RETURNING upvotes`;
+      return { upvotes: Number(r[0]?.upvotes ?? 0), hasUpvoted: true };
+    }
+  }
 }

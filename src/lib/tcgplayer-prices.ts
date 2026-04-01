@@ -326,3 +326,52 @@ export const TCGPLAYER_CATEGORIES = {
 } as const;
 
 export type PriceSupportedGame = keyof typeof TCGPLAYER_CATEGORIES;
+
+// ── Latest set helper (for HeroSlider) ───────────────────────────────────────
+
+export interface LatestSetInfo {
+  game: string;
+  gameEmoji: string;
+  categoryId: number;
+  setName: string;
+}
+
+const GAME_EMOJI_MAP: Record<string, string> = {
+  "grand-archive":   "⚔️",
+  "flesh-and-blood": "🩸",
+  "one-piece":       "🏴‍☠️",
+  "pokemon":         "🎮",
+};
+
+/** Returns the latest published set for each game, cached for 24 h. */
+export async function getLatestSets(): Promise<LatestSetInfo[]> {
+  const games: Array<{ slug: string; emoji: string; categoryId: number }> = [
+    { slug: "grand-archive",   emoji: "⚔️",  categoryId: 74 },
+    { slug: "flesh-and-blood", emoji: "🩸",  categoryId: 62 },
+    { slug: "one-piece",       emoji: "🏴‍☠️", categoryId: 68 },
+    { slug: "pokemon",         emoji: "🎮",  categoryId: 3  },
+  ];
+
+  const results = await Promise.allSettled(
+    games.map(async (g) => {
+      const groups = await fetchGroups(g.categoryId);
+      // Sort by publishedOn descending, skip supplementals
+      const sorted = groups
+        .filter(gr => !gr.isSupplemental)
+        .sort((a, b) => new Date(b.publishedOn).getTime() - new Date(a.publishedOn).getTime());
+      const latest = sorted[0];
+      if (!latest) return null;
+      return {
+        game:       g.slug,
+        gameEmoji:  g.emoji,
+        categoryId: g.categoryId,
+        setName:    latest.name,
+      } satisfies LatestSetInfo;
+    })
+  );
+
+  return results
+    .filter((r): r is PromiseFulfilledResult<LatestSetInfo | null> => r.status === "fulfilled")
+    .map(r => r.value)
+    .filter((r): r is LatestSetInfo => r !== null);
+}
