@@ -1,5 +1,6 @@
-import { getAllPosts, getPinnedPosts } from "@/lib/posts";
+import { getAllPosts, getPinnedPosts, getFeaturedPosts } from "@/lib/posts";
 import PostCard from "@/components/PostCard";
+import ArticleCarousel from "@/components/ArticleCarousel";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -23,7 +24,11 @@ type Props = {
 
 export default async function BlogPage({ searchParams }: Props) {
   const { page: pageParam, tag } = await searchParams;
-  const [allPosts, pinnedPosts] = await Promise.all([getAllPosts(), getPinnedPosts()]);
+  const [allPosts, pinnedPosts, featuredPosts] = await Promise.all([
+    getAllPosts(),
+    getPinnedPosts(),
+    getFeaturedPosts(3),
+  ]);
 
   // Filter by tag when active — pinned posts included in filtered view
   const tagFiltered = tag
@@ -41,20 +46,49 @@ export default async function BlogPage({ searchParams }: Props) {
   // Pinned posts: show on page 1 only, hide when tag filter active (they appear in results)
   const showPinned = !tag && page === 1 && pinnedPosts.length > 0;
 
+  // Posts for the carousel (up to 12, excluding featured to avoid duplication)
+  const featuredSlugs = new Set(featuredPosts.map(p => p.slug));
+  const carouselPosts = allPosts.filter(p => !featuredSlugs.has(p.slug)).slice(0, 12);
+
   return (
-    <div className="max-w-7xl mx-auto px-6 lg:px-10 py-14">
-      {/* Page header */}
-      <div className="border-b-2 border-[var(--border-strong)] pb-6 mb-10">
-        <h1
-          className="text-5xl md:text-6xl font-black text-[var(--foreground)] leading-none tracking-tight mb-3"
-          style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
-        >
-          All Posts
-        </h1>
-        <p className="label-upper text-[var(--text-muted)]">
-          {allPosts.length} article{allPosts.length !== 1 ? "s" : ""} — card theories, strategy & more
-        </p>
-      </div>
+    <div>
+      {/* Article carousel — scrollable strip of latest articles */}
+      {carouselPosts.length > 0 && (
+        <ArticleCarousel posts={carouselPosts} title="Latest Articles" />
+      )}
+
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-14">
+        {/* Featured 3-column grid */}
+        {!tag && page === 1 && featuredPosts.length > 0 && (
+          <section className="mb-14">
+            <div className="flex items-baseline justify-between mb-8">
+              <h2
+                className="text-3xl font-black text-[var(--foreground)]"
+                style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
+              >
+                Featured
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {featuredPosts.map((post, i) => (
+                <PostCard key={post.slug} post={post} index={i} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Page header */}
+        <div className="border-b-2 border-[var(--border-strong)] pb-6 mb-10">
+          <h1
+            className="text-5xl md:text-6xl font-black text-[var(--foreground)] leading-none tracking-tight mb-3"
+            style={{ fontFamily: "var(--font-serif, 'Playfair Display', serif)" }}
+          >
+            All Articles
+          </h1>
+          <p className="label-upper text-[var(--text-muted)]">
+            {allPosts.length} article{allPosts.length !== 1 ? "s" : ""} — card theories, strategy &amp; more
+          </p>
+        </div>
 
       {/* Tag filter chips — 5d */}
       <div className="flex flex-wrap gap-2 mb-8">
@@ -175,6 +209,7 @@ export default async function BlogPage({ searchParams }: Props) {
           )}
         </>
       )}
+      </div>
     </div>
   );
 }
