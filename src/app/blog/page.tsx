@@ -4,6 +4,8 @@ import ArticleCarousel from "@/components/ArticleCarousel";
 import Link from "next/link";
 import type { Metadata } from "next";
 
+export const revalidate = 300; // ISR: rebuild at most every 5 minutes
+
 export const metadata: Metadata = {
   title: "All Articles",
   description: "Browse all TCG Times articles — card theories, strategy guides, and community discussion.",

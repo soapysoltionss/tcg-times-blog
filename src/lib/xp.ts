@@ -112,6 +112,11 @@ export type User = {
    * Displayed on listings where localPickup = true so buyers can find local sellers.
    */
   city?: string;
+  /**
+   * ISO date string (YYYY-MM-DD) of the last day the user correctly guessed
+   * the daily Pokémon silhouette. Used to enforce the 1-per-day limit.
+   */
+  lastPokemonGuessDate?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -175,6 +180,13 @@ export const TASK_CATALOGUE: TaskDefinition[] = [
     description: "Sell a card on the TCG Times marketplace.",
     xpReward: 75,
     icon: "🤝",
+  },
+  {
+    id: "daily_pokemon_guess",
+    label: "Guess That Pokémon!",
+    description: "Correctly identify today's mystery silhouette.",
+    xpReward: 50,
+    icon: "⚡",
   },
 ];
 

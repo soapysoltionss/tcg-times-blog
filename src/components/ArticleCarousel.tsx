@@ -254,9 +254,11 @@ export default function ArticleCarousel({ posts, title = "Featured Articles" }: 
         </div>
       </div>
 
-      {/* Embla viewport */}
-      <div className="overflow-hidden" ref={emblaRef}>
-        <div className="embla__container flex -mx-3 px-6 lg:px-10 pb-10 pt-1 max-w-7xl mx-auto">
+      {/* Embla viewport — constrained to the same max-width and horizontal
+          padding as every other section on the page so first and last cards
+          align perfectly with the page edges. */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 overflow-hidden" ref={emblaRef}>
+        <div className="flex -mx-3 pb-10 pt-1">
           {posts.map((post) => (
             <SlideCard key={post.slug} post={post} />
           ))}
