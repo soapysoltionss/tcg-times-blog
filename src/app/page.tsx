@@ -48,6 +48,11 @@ export default async function HomePage() {
         </section>
       )}
 
+      {/* Article carousel — immediately below the hero */}
+      {carouselPosts.length > 0 && (
+        <ArticleCarousel posts={carouselPosts} title="Latest Articles" />
+      )}
+
       {/* Game categories strip */}
       <section className="border-b border-[var(--border)] bg-[var(--muted)]">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 flex overflow-x-auto">
@@ -68,11 +73,6 @@ export default async function HomePage() {
           </Link>
         </div>
       </section>
-
-      {/* Article carousel — sits right below the bulletin ticker */}
-      {carouselPosts.length > 0 && (
-        <ArticleCarousel posts={carouselPosts} title="Latest Articles" />
-      )}
 
       {/* Featured 3-column grid */}
       {gridPosts.length > 0 && (
