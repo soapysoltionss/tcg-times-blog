@@ -1,5 +1,6 @@
 import { getAllPosts, getPinnedPosts, getFeaturedPosts } from "@/lib/posts";
 import PostCard from "@/components/PostCard";
+import AnimateIn from "@/components/AnimateIn";
 import ArticleCarousel from "@/components/ArticleCarousel";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -73,7 +74,9 @@ export default async function BlogPage({ searchParams }: Props) {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {featuredPosts.map((post, i) => (
-                <PostCard key={post.slug} post={post} index={i} />
+                <AnimateIn key={post.slug} delay={i * 0.08}>
+                  <PostCard post={post} index={i} />
+                </AnimateIn>
               ))}
             </div>
           </section>
