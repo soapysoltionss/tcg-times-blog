@@ -26,7 +26,7 @@ function SlideCard({ post }: { post: PostMeta }) {
   return (
     <Link
       href={`/blog/${post.slug}`}
-      className="group block h-full border border-[var(--border)] hover:border-[var(--border-strong)] bg-[var(--background)] transition-colors overflow-hidden"
+      className="group block border border-[var(--border)] hover:border-[var(--border-strong)] bg-[var(--background)] transition-colors overflow-hidden"
     >
       <div className="relative aspect-[16/9] overflow-hidden">
         {post.coverImage ? (
@@ -147,11 +147,15 @@ export default function ArticleCarousel({ posts, title = "Featured Articles" }: 
   // ── Stagger-in entrance animation ────────────────────────────────────────
   useEffect(() => {
     if (!trackRef.current) return;
-    const cards = trackRef.current.children;
-    gsap.fromTo(cards,
-      { opacity: 0, y: 24 },
-      { opacity: 1, y: 0, duration: 0.5, stagger: 0.07, ease: "power2.out", clearProps: "transform,opacity" }
-    );
+    const cards = Array.from(trackRef.current.children) as HTMLElement[];
+    gsap.from(cards, {
+      opacity: 0,
+      y: 20,
+      duration: 0.5,
+      stagger: 0.07,
+      ease: "power2.out",
+      clearProps: "all",
+    });
   }, []);
 
   // ── GSAP Observer: drag/swipe on the viewport ────────────────────────────
