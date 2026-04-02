@@ -5,7 +5,7 @@ import Link from "next/link";
 
 type TileState = "correct" | "present" | "absent" | "empty" | "active";
 type Row = Array<{ letter: string; state: TileState }>;
-type DailyData = { pokemonId: number; pokemonName: string; date: string };
+type DailyData = { pokemonId: number; pokemonName: string; date: string; riddle: string };
 type GuessResult = { correct: boolean; pokemonName: string | null; xpAwarded: number; alreadyGuessed: boolean };
 
 const MAX_GUESSES = 6;
@@ -208,16 +208,27 @@ export default function GuessPokemonPage() {
         <p className="text-xs text-[var(--text-muted)] mt-1.5">🟩 right place &nbsp;·&nbsp; 🟨 wrong place &nbsp;·&nbsp; ⬛ not in name</p>
       </div>
 
-      <div className="mb-6">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={spriteUrl(daily.pokemonId)}
-          alt={gameOver ? capitalize(daily.pokemonName) : "Mystery Pokémon"}
-          width={144} height={144} draggable={false}
-          className={`w-36 h-36 object-contain select-none transition-all duration-700 ${gameOver ? "drop-shadow-[0_0_16px_rgba(250,204,21,0.5)]" : ""}`}
-          style={gameOver ? {} : { filter: "brightness(0) saturate(0)", imageRendering: "pixelated" }}
-        />
-      </div>
+      {/* Riddle — shown while playing; hidden after game over */}
+      {!gameOver && (
+        <div className="w-full mb-6 border border-[var(--border)] p-5 text-center bg-[var(--muted)]">
+          <p className="label-upper text-[9px] text-[var(--text-muted)] mb-2">Today&apos;s Clue</p>
+          <p className="text-sm text-[var(--foreground)] leading-relaxed italic">&ldquo;{daily.riddle}&rdquo;</p>
+        </div>
+      )}
+
+      {/* Sprite — only revealed after game over */}
+      {gameOver && (
+        <div className="mb-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={spriteUrl(daily.pokemonId)}
+            alt={capitalize(daily.pokemonName)}
+            width={144} height={144} draggable={false}
+            className="w-36 h-36 object-contain select-none drop-shadow-[0_0_16px_rgba(250,204,21,0.5)]"
+            style={{ imageRendering: "pixelated" }}
+          />
+        </div>
+      )}
 
       {gameOver && (
         <div className={`w-full mb-6 p-4 text-center border ${won ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20" : "border-red-400 bg-red-50 dark:bg-red-900/20"}`}>
