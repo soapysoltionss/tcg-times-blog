@@ -84,6 +84,31 @@ export default async function HomePage() {
           </Link>
         </div>
       </section>
+
+      {/* Daily Pokémon game banner */}
+      <section className="border-b border-[var(--border)]">
+        <Link
+          href="/tools/guess-pokemon"
+          className="group max-w-7xl mx-auto px-6 lg:px-10 py-5 flex items-center gap-5 hover:bg-[var(--muted)] transition-colors"
+        >
+          {/* Pokéball icon */}
+          <span className="text-3xl select-none" aria-hidden>🎮</span>
+
+          <div className="flex-1 min-w-0">
+            <p className="label-upper text-[9px] text-[var(--text-muted)] mb-0.5">Daily Mini-Game</p>
+            <p className="font-black text-base text-[var(--foreground)] leading-tight truncate">
+              Guess That Pokémon! — Today&apos;s Wordle
+            </p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
+              Read the clue, name the Gen 1 Pokémon in 6 tries. New Pokémon every day.
+            </p>
+          </div>
+
+          <span className="label-upper text-[9px] text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors whitespace-nowrap hidden sm:block">
+            Play now →
+          </span>
+        </Link>
+      </section>
     </div>
   );
 }
