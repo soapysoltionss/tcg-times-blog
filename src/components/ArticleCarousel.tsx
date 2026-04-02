@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import useEmblaCarousel from "embla-carousel-react";
-import Autoplay from "embla-carousel-autoplay";
 import type { PostMeta } from "@/types/post";
 import { getCategoryBySlug } from "@/config/site";
 import { formatDate } from "@/lib/utils";
@@ -20,7 +19,7 @@ function SlideCard({ post }: { post: PostMeta }) {
   const cat = getCategoryBySlug(post.category);
   const gradient = GRADIENT_BY_GAME[post.category] ?? "from-zinc-800 to-zinc-600";
   return (
-    <article className="embla__slide min-w-0 flex-[0_0_100%] sm:flex-[0_0_50%] lg:flex-[0_0_33.333%] xl:flex-[0_0_25%]" style={{ paddingLeft: "1rem" }}>
+    <article className="article-carousel-slide shrink-0 min-w-0">
       <Link
         href={`/blog/${post.slug}`}
         className="group block h-full border border-[var(--border)] hover:border-[var(--border-strong)] bg-[var(--background)] transition-colors overflow-hidden"
@@ -80,26 +79,12 @@ function Arrow({ dir, onClick, disabled }: { dir: "prev" | "next"; onClick: () =
 type Props = { posts: PostMeta[]; title?: string };
 
 export default function ArticleCarousel({ posts, title = "Featured Articles" }: Props) {
-  const reducedMotion = typeof window !== "undefined"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    : false;
-
-  const autoplayRef = useRef(
-    Autoplay({ delay: 4500, stopOnInteraction: true, stopOnMouseEnter: true })
-  );
-
-  // Embla viewport is full-width; padding is applied via Embla's padding option
-  // so it measures the full container width for slide percentages, then insets slides.
-  // This avoids the "partial card peek" caused by padding on the overflow-hidden element.
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    {
-      loop: false,
-      align: "start",
-      dragFree: false,
-      containScroll: "trimSnaps",
-    },
-    reducedMotion ? [] : [autoplayRef.current]
-  );
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: false,
+    align: "start",
+    dragFree: false,
+    containScroll: "trimSnaps",
+  });
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps]     = useState<number[]>([]);
@@ -128,14 +113,22 @@ export default function ArticleCarousel({ posts, title = "Featured Articles" }: 
 
   if (posts.length === 0) return null;
 
-  // Page-level horizontal padding as a pixel value — must match px-6 / lg:px-10.
-  // We apply this as left padding on the Embla container div so the first card
-  // aligns with the rest of the page, while overflow-hidden sits outside it.
-  const pagePad = "clamp(1.5rem, 3.5vw, 2.5rem)";
-
   return (
     <section className="border-b border-[var(--border)] bg-[var(--background)]">
-      {/* Header — constrained and padded normally */}
+      {/*
+        Slide widths use calc() to subtract gap space so cards fill exactly:
+          mobile:  1 card  = 100%
+          sm≥640:  2 cards = calc(50% - 8px)   (gap-4=16px, 1 gap / 2 cards = 8px each)
+          lg≥1024: 3 cards = calc(33.333% - 11px) (2 gaps / 3 cards ≈ 10.67px each)
+          xl≥1280: 4 cards = calc(25% - 12px)  (3 gaps / 4 cards = 12px each)
+      */}
+      <style>{`
+        .article-carousel-slide { flex: 0 0 100%; }
+        @media (min-width: 640px)  { .article-carousel-slide { flex: 0 0 calc(50% - 8px); } }
+        @media (min-width: 1024px) { .article-carousel-slide { flex: 0 0 calc(33.333% - 11px); } }
+        @media (min-width: 1280px) { .article-carousel-slide { flex: 0 0 calc(25% - 12px); } }
+      `}</style>
+      {/* Header */}
       <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-10 pb-4 flex items-center justify-between gap-4">
         <h2 className="text-2xl font-black text-[var(--foreground)] tracking-tight" style={{ fontFamily: "var(--font-serif, serif)" }}>
           {title}
@@ -146,19 +139,20 @@ export default function ArticleCarousel({ posts, title = "Featured Articles" }: 
         </div>
       </div>
 
-      {/* Embla viewport — overflow-hidden here so Embla clips correctly.
-          The pagePad left/right keeps cards aligned with the rest of the page.
-          Each slide has paddingLeft: 1rem as its gap; we cancel the first-slot
-          gap via marginLeft: -1rem on the flex container. */}
-      <div
-        ref={emblaRef}
-        className="overflow-hidden max-w-7xl mx-auto"
-        style={{ paddingLeft: pagePad, paddingRight: pagePad }}
-      >
-        <div className="flex pb-10 pt-1" style={{ marginLeft: "-1rem" }}>
-          {posts.map((post) => (
-            <SlideCard key={post.slug} post={post} />
-          ))}
+      {/*
+        Layout strategy:
+        - Outer wrapper: max-w-7xl + px-6/lg:px-10 for page alignment (NO overflow-hidden)
+        - ref div: overflow-hidden — this is what Embla uses as its viewport and clip boundary
+        - Flex container: gap-4, no negative margin tricks
+        - Each slide: calc() width so 4 cards + 3 gaps = exactly 100% of the clipped area
+      */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 pb-10 pt-1">
+        <div ref={emblaRef} className="overflow-hidden">
+          <div className="flex gap-4">
+            {posts.map((post) => (
+              <SlideCard key={post.slug} post={post} />
+            ))}
+          </div>
         </div>
       </div>
 
