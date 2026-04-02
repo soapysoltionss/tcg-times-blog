@@ -198,10 +198,11 @@ export default function ArticleCarousel({ posts, title = "Featured Articles" }: 
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
     {
-      loop: true,
+      loop: false,
       align: "start",
       dragFree: false,
       skipSnaps: false,
+      containScroll: "trimSnaps",
     },
     reducedMotion ? [] : [autoplayRef.current]
   );
@@ -254,11 +255,9 @@ export default function ArticleCarousel({ posts, title = "Featured Articles" }: 
         </div>
       </div>
 
-      {/* Embla viewport — constrained to the same max-width and horizontal
-          padding as every other section on the page so first and last cards
-          align perfectly with the page edges. */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 overflow-hidden" ref={emblaRef}>
-        <div className="flex -mx-3 pb-10 pt-1">
+      {/* Embla viewport — full-bleed clip, inner padding via containPadding trick */}
+      <div className="overflow-hidden" ref={emblaRef}>
+        <div className="max-w-7xl mx-auto flex px-3 lg:px-7 pb-10 pt-1">
           {posts.map((post) => (
             <SlideCard key={post.slug} post={post} />
           ))}
