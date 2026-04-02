@@ -43,7 +43,7 @@ function SlideCard({ post }: { post: PostMeta }) {
   const gradient = GRADIENT_BY_GAME[post.category] ?? "from-zinc-800 to-zinc-600";
 
   return (
-    <article className="embla__slide min-w-0 flex-[0_0_100%] sm:flex-[0_0_50%] lg:flex-[0_0_33.333%] xl:flex-[0_0_25%] px-3">
+    <article className="embla__slide min-w-0 flex-[0_0_100%] sm:flex-[0_0_50%] lg:flex-[0_0_33.333%] xl:flex-[0_0_25%] pl-4 first:pl-0">
       <Link
         href={`/blog/${post.slug}`}
         className="group block h-full border border-[var(--border)] hover:border-[var(--border-strong)] bg-[var(--background)] transition-colors overflow-hidden"
@@ -255,9 +255,9 @@ export default function ArticleCarousel({ posts, title = "Featured Articles" }: 
         </div>
       </div>
 
-      {/* Embla viewport — full-bleed clip, inner padding via containPadding trick */}
-      <div className="overflow-hidden" ref={emblaRef}>
-        <div className="max-w-7xl mx-auto flex px-3 lg:px-7 pb-10 pt-1">
+      {/* Embla viewport — clipped inside the page's standard padded container */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 overflow-hidden" ref={emblaRef}>
+        <div className="flex pb-10 pt-1">
           {posts.map((post) => (
             <SlideCard key={post.slug} post={post} />
           ))}
