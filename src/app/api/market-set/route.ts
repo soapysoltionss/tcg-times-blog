@@ -32,8 +32,10 @@ interface TcgCsvProduct {
   categoryId: number;
   groupId: number;
   imageUrl?: string;
+  // Some sets use flat ext* fields, others use extendedData[]
   extRarity?: string;
   extNumber?: string;
+  extendedData?: Array<{ name: string; displayName: string; value: string }>;
 }
 
 interface TcgCsvPrice {
@@ -97,20 +99,45 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const cards = productsData.results.map(p => {
-      const priceData = priceByProduct.get(p.productId);
-      return {
-        productId:        p.productId,
-        name:             p.name,
-        cleanName:        p.cleanName,
-        number:           p.extNumber,
-        rarity:           p.extRarity,
-        imageUrl:         p.imageUrl,
-        marketPriceCents: priceData?.marketPriceCents ?? null,
-        midPriceCents:    priceData?.midPriceCents ?? null,
-        subTypeName:      priceData?.subTypeName ?? "Normal",
-      };
-    });
+    const cards = productsData.results
+      .map(p => {
+        // Build a lookup from extendedData (present on some sets like First Partner)
+        const ext: Record<string, string> = {};
+        for (const e of p.extendedData ?? []) {
+          ext[e.name] = e.value;
+        }
+
+        const number = p.extNumber ?? ext["Number"] ?? null;
+        const rarity = p.extRarity ?? ext["Rarity"] ?? null;
+
+        // Filter out sealed product (booster packs, binders, boxes) — they have
+        // no HP in extendedData and no card number. Keep products that have either
+        // a number, a rarity, or an HP value (i.e. they're actual cards).
+        const isCard = !!(number || rarity || ext["HP"]);
+
+        return {
+          productId:        p.productId,
+          name:             p.name,
+          cleanName:        p.cleanName,
+          number,
+          rarity,
+          imageUrl:         p.imageUrl ?? null,
+          marketPriceCents: null as number | null,
+          midPriceCents:    null as number | null,
+          subTypeName:      "Normal",
+          _isCard:          isCard,
+        };
+      })
+      .filter(c => c._isCard)
+      .map(({ _isCard, ...c }) => {
+        const priceData = priceByProduct.get(c.productId);
+        return {
+          ...c,
+          marketPriceCents: priceData?.marketPriceCents ?? null,
+          midPriceCents:    priceData?.midPriceCents ?? null,
+          subTypeName:      priceData?.subTypeName ?? "Normal",
+        };
+      });
 
     return NextResponse.json({
       groupId:     gid,
