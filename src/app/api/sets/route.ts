@@ -3,11 +3,77 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * GET /api/sets?game=pokemon|grand-archive|flesh-and-blood|one-piece
  *
- * Returns all sets (groups) for a given TCG from tcgcsv.com (public TCGPlayer mirror).
- * Cached at the edge for 24 hours — set lists change rarely.
+ * pokemon    → pokemontcg.io  (accurate dates, card counts, hi-res images, daily prices)
+ * all others → tcgcsv.com     (public TCGPlayer mirror)
  *
  * Response: { game, sets: SetInfo[] }
+ * SetInfo.groupId = pokemontcg.io set id (e.g. "sv9") for pokemon,
+ *                   tcgcsv numeric groupId as string for others.
  */
+
+// ---------------------------------------------------------------------------
+// Shared type
+// ---------------------------------------------------------------------------
+
+export interface SetInfo {
+  groupId: string;
+  name: string;
+  publishedOn: string | null;
+  categoryId: number;
+  totalCards?: number;
+  setSymbolUrl?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Pokémon — pokemontcg.io
+// ---------------------------------------------------------------------------
+
+const POKEMON_API = "https://api.pokemontcg.io/v2";
+
+interface PkmnSet {
+  id: string;
+  name: string;
+  total: number;
+  releaseDate: string;
+  images: { symbol: string; logo: string };
+}
+
+async function getPokemonSets(): Promise<SetInfo[]> {
+  const headers: Record<string, string> = { "User-Agent": "tcgtimes-blog/1.0" };
+  const apiKey = process.env.POKEMON_TCG_API_KEY;
+  if (apiKey) headers["X-Api-Key"] = apiKey;
+
+  // Max pageSize is 250 — paginate if needed
+  const allSets: PkmnSet[] = [];
+  let page = 1;
+  while (true) {
+    const res = await fetch(
+      `${POKEMON_API}/sets?orderBy=-releaseDate&pageSize=250&page=${page}`,
+      { headers, signal: AbortSignal.timeout(15_000), cache: "no-store" }
+    );
+    if (!res.ok) throw new Error(`pokemontcg.io sets: ${res.status}`);
+    const data = await res.json() as {
+      data: PkmnSet[];
+      totalCount: number;
+    };
+    allSets.push(...data.data);
+    if (allSets.length >= data.totalCount) break;
+    page++;
+  }
+
+  return allSets.map(s => ({
+    groupId:      s.id,
+    name:         s.name,
+    publishedOn:  s.releaseDate ? s.releaseDate.replace(/\//g, "-") : null,
+    categoryId:   3,
+    totalCards:   s.total,
+    setSymbolUrl: s.images?.symbol ?? undefined,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Non-pokemon — tcgcsv.com
+// ---------------------------------------------------------------------------
 
 const TCGCSV = "https://tcgcsv.com/tcgplayer";
 
@@ -15,100 +81,85 @@ const CATEGORY_ID: Record<string, number> = {
   "flesh-and-blood": 62,
   "grand-archive":   74,
   "one-piece":       68,
-  "pokemon":          3,
 };
 
-export interface SetInfo {
-  groupId: number;
-  name: string;
-  publishedOn: string | null;
-  categoryId: number;
-}
-
-// Hardcoded correct release dates for sets whose tcgcsv publishedOn has been
-// permanently corrupted by a bulk-metadata migration. keyed by groupId.
-// Sources: Bulbapedia / official TCG release history.
 const KNOWN_DATES: Record<number, string> = {
-  // POP Series (Nintendo promotional sets, 2004–2008)
-  1422: "2006-08-01", // POP Series 1  — released Aug 2006
-  1447: "2006-10-01", // POP Series 2  — released Oct 2006
-  1442: "2006-11-01", // POP Series 3  — released Nov 2006
-  1452: "2007-02-01", // POP Series 4  — released Feb 2007
-  1439: "2007-08-01", // POP Series 5  — released Aug 2007
-  1432: "2008-03-01", // POP Series 6  — released Mar 2008
-  1414: "2008-08-01", // POP Series 7  — released Aug 2008
-  1450: "2008-10-01", // POP Series 8  — released Oct 2008
-  1446: "2009-03-01", // POP Series 9  — released Mar 2009
-  // EX Trainer Kits (2004)
-  1542: "2004-08-01", // EX Trainer Kit 2: Plusle & Minun
-  1543: "2004-08-01", // EX Trainer Kit 1: Latias & Latios
-  // Nintendo Promos
-  1423: "2003-01-01",
+  1422: "2006-08-01", 1447: "2006-10-01", 1442: "2006-11-01",
+  1452: "2007-02-01", 1439: "2007-08-01", 1432: "2008-03-01",
+  1414: "2008-08-01", 1450: "2008-10-01", 1446: "2009-03-01",
+  1542: "2004-08-01", 1543: "2004-08-01", 1423: "2003-01-01",
 };
+
+const DIRTY_MARKER = "T20:00:05";
+
+function cleanDate(groupId: number, iso: string | null): string | null {
+  if (KNOWN_DATES[groupId]) return KNOWN_DATES[groupId];
+  if (!iso) return null;
+  if (iso.includes(DIRTY_MARKER)) return null;
+  return iso.split("T")[0];
+}
 
 interface TcgCsvGroup {
   groupId: number;
   name: string;
   publishedOn: string | null;
-  isSupplemental: boolean;
   categoryId: number;
 }
+
+async function getTcgCsvSets(categoryId: number): Promise<SetInfo[]> {
+  const res = await fetch(`${TCGCSV}/${categoryId}/groups`, {
+    signal: AbortSignal.timeout(15_000),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`tcgcsv returned ${res.status}`);
+
+  const data = await res.json() as { results: TcgCsvGroup[] };
+  const groups: TcgCsvGroup[] = data.results ?? [];
+
+  const sorted = [...groups].sort((a, b) => {
+    const da = cleanDate(a.groupId, a.publishedOn);
+    const db = cleanDate(b.groupId, b.publishedOn);
+    if (!da && !db) return b.groupId - a.groupId;
+    if (!da) return 1;
+    if (!db) return -1;
+    const cmp = db.localeCompare(da);
+    return cmp !== 0 ? cmp : b.groupId - a.groupId;
+  });
+
+  return sorted.map(g => ({
+    groupId:     String(g.groupId),
+    name:        g.name,
+    publishedOn: cleanDate(g.groupId, g.publishedOn),
+    categoryId:  g.categoryId ?? categoryId,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Route handler
+// ---------------------------------------------------------------------------
 
 export async function GET(req: NextRequest) {
   const game = req.nextUrl.searchParams.get("game") ?? "";
 
-  const categoryId = CATEGORY_ID[game];
-  if (!categoryId) {
-    return NextResponse.json({ error: `Unknown game: ${game}. Valid: ${Object.keys(CATEGORY_ID).join(", ")}` }, { status: 400 });
-  }
-
   try {
-    const res = await fetch(`${TCGCSV}/${categoryId}/groups`, {
-      signal: AbortSignal.timeout(15_000),
-      cache: "no-store",
-    });
-    if (!res.ok) {
-      return NextResponse.json({ error: `tcgcsv returned ${res.status}` }, { status: 502 });
+    let sets: SetInfo[];
+
+    if (game === "pokemon") {
+      sets = await getPokemonSets();
+    } else {
+      const categoryId = CATEGORY_ID[game];
+      if (!categoryId) {
+        return NextResponse.json(
+          { error: `Unknown game: ${game}. Valid: pokemon, ${Object.keys(CATEGORY_ID).join(", ")}` },
+          { status: 400 }
+        );
+      }
+      sets = await getTcgCsvSets(categoryId);
     }
-
-    const data = await res.json() as { results: TcgCsvGroup[] };
-    const groups: TcgCsvGroup[] = data.results ?? [];
-
-    // tcgcsv sometimes bulk-updates old set metadata and stamps them with a
-    // migration timestamp (e.g. "2026-04-05T20:00:05.5929925Z"). Detect these as
-    // "dirty" dates and treat them as null for display so ancient sets don't
-    // float to the top as if they released today.
-    const DIRTY_MARKER = "T20:00:05";
-
-    function cleanDate(groupId: number, iso: string | null): string | null {
-      // Use hardcoded known date first (overrides corrupted tcgcsv data)
-      if (KNOWN_DATES[groupId]) return KNOWN_DATES[groupId];
-      if (!iso) return null;
-      if (iso.includes(DIRTY_MARKER)) return null;
-      return iso;
-    }
-
-    // Sort: newest first by cleanDate, then by groupId descending as tiebreaker
-    const sorted = [...groups].sort((a, b) => {
-      const da = cleanDate(a.groupId, a.publishedOn);
-      const db = cleanDate(b.groupId, b.publishedOn);
-      if (!da && !db) return b.groupId - a.groupId;
-      if (!da) return 1;
-      if (!db) return -1;
-      const cmp = db.localeCompare(da);
-      return cmp !== 0 ? cmp : b.groupId - a.groupId;
-    });
-
-    const sets: SetInfo[] = sorted.map(g => ({
-      groupId:     g.groupId,
-      name:        g.name,
-      publishedOn: cleanDate(g.groupId, g.publishedOn),
-      categoryId:  g.categoryId ?? categoryId,
-    }));
 
     return NextResponse.json(
-      { game, categoryId, sets },
-      { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=300" } },
+      { game, sets },
+      { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=300" } }
     );
   } catch (err) {
     console.error("[api/sets]", err);

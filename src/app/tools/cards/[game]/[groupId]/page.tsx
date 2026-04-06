@@ -485,7 +485,11 @@ export default function SetGalleryPage({
 
   // Fetch set data
   useEffect(() => {
-    fetch(`/api/market-set?game=${encodeURIComponent(game)}&groupId=${encodeURIComponent(groupId)}`)
+    const endpoint =
+      game === "pokemon"
+        ? `/api/pokemon-set?setId=${encodeURIComponent(groupId)}`
+        : `/api/market-set?game=${encodeURIComponent(game)}&groupId=${encodeURIComponent(groupId)}`;
+    fetch(endpoint)
       .then(r => r.json())
       .then((d: SetData & { error?: string }) => {
         if (d.error) { setError(d.error); setLoading(false); return; }
