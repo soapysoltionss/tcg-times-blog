@@ -676,11 +676,31 @@ export default function SetGalleryPage({
       {/* ── Main content ── */}
       <div className="max-w-7xl mx-auto px-6 lg:px-10 py-8">
 
-        {/* Stats */}
-        <StatsBar cards={allCards} game={game} />
+        {/* Stats — only when there are cards */}
+        {allCards.length > 0 && <StatsBar cards={allCards} game={game} />}
 
         {/* Card grid */}
-        {sorted.length === 0 ? (
+        {allCards.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+            <span className="text-5xl">{meta.emoji}</span>
+            <p className="text-[var(--foreground)] font-bold text-lg">
+              Individual cards not yet listed
+            </p>
+            <p className="text-[var(--text-muted)] text-sm max-w-sm leading-relaxed">
+              TCGPlayer hasn&apos;t added individual card listings for{" "}
+              <span className="text-[var(--foreground)] font-semibold">{setData.name}</span>{" "}
+              yet. Check back after the set releases or once singles go on sale.
+            </p>
+            <a
+              href={`https://www.tcgplayer.com/search/${game}/product?q=${encodeURIComponent(setData.name)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="label-upper text-[10px] px-4 py-2 border border-[var(--border)] text-[var(--text-muted)] rounded-lg hover:text-[var(--foreground)] hover:border-[var(--border-strong)] transition-colors"
+            >
+              Search on TCGPlayer ↗
+            </a>
+          </div>
+        ) : sorted.length === 0 ? (
           <div className="text-center py-16 text-[var(--text-muted)] text-sm">
             No cards match your filters.
           </div>
