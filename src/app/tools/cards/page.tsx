@@ -12,10 +12,13 @@ gsap.registerPlugin(ScrollTrigger);
 // ---------------------------------------------------------------------------
 
 interface SetInfo {
-  groupId: number;
+  groupId: string;
   name: string;
   publishedOn: string | null;
   categoryId: number;
+  totalCards?: number;
+  setSymbolUrl?: string;
+  source?: "pokemontcg" | "tcgcsv";
 }
 
 // ---------------------------------------------------------------------------
@@ -181,7 +184,7 @@ function SetCard({ set, game }: { set: SetInfo; game: typeof GAMES[number] }) {
   return (
     <Link
       ref={cardRef}
-      href={`/tools/cards/${game.slug}/${set.groupId}`}
+      href={`/tools/cards/${game.slug}/${set.groupId}${set.source === "tcgcsv" ? "?src=tcgcsv" : ""}`}
       className={`set-card group relative flex flex-col justify-between p-3.5 rounded-lg border ${game.border} bg-gradient-to-br ${game.bg} backdrop-blur-sm hover:brightness-110 transition-[filter] cursor-pointer`}
       style={{ willChange: "transform", transformStyle: "preserve-3d" }}
       onMouseMove={handleMouseMove}

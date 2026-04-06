@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { use } from "react";
+import { useSearchParams } from "next/navigation";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { PriceGraph, PricePoint } from "@/components/PriceGraph";
@@ -536,7 +537,21 @@ export default function SetGalleryPage({
 }: {
   params: Promise<{ game: string; groupId: string }>;
 }) {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-[var(--text-muted)]">Loading…</div>}>
+      <SetGalleryPageInner params={params} />
+    </Suspense>
+  );
+}
+
+function SetGalleryPageInner({
+  params,
+}: {
+  params: Promise<{ game: string; groupId: string }>;
+}) {
   const { game, groupId } = use(params);
+  const searchParams = useSearchParams();
+  const srcOverride = searchParams.get("src"); // "tcgcsv" = force market-set endpoint
 
   const [setData,  setSetData]   = useState<SetData | null>(null);
   const [loading,  setLoading]   = useState(true);
@@ -551,10 +566,12 @@ export default function SetGalleryPage({
 
   // Fetch set data
   useEffect(() => {
-    const endpoint =
-      game === "pokemon"
-        ? `/api/pokemon-set?setId=${encodeURIComponent(groupId)}`
-        : `/api/market-set?game=${encodeURIComponent(game)}&groupId=${encodeURIComponent(groupId)}`;
+    // game=pokemon uses pokemontcg.io UNLESS ?src=tcgcsv is set
+    // (tcgcsv is used for promo groups not yet in pokemontcg.io)
+    const useTcgCsv = srcOverride === "tcgcsv" || game !== "pokemon";
+    const endpoint = useTcgCsv
+      ? `/api/market-set?game=${encodeURIComponent(game)}&groupId=${encodeURIComponent(groupId)}`
+      : `/api/pokemon-set?setId=${encodeURIComponent(groupId)}`;
     fetch(endpoint)
       .then(r => r.json())
       .then((d: SetData & { error?: string }) => {

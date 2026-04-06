@@ -22,6 +22,8 @@ export interface SetInfo {
   categoryId: number;
   totalCards?: number;
   setSymbolUrl?: string;
+  /** "tcgcsv" means this set should use /api/market-set even for game=pokemon */
+  source?: "pokemontcg" | "tcgcsv";
 }
 
 // ---------------------------------------------------------------------------
@@ -83,6 +85,23 @@ const CATEGORY_ID: Record<string, number> = {
   "one-piece":       68,
 };
 
+// tcgcsv Pokémon promo groups that pokemontcg.io doesn't carry yet.
+// These are fetched from tcgcsv and merged into the Pokémon set list.
+// Key = groupId, value = display label override (use group name if omitted).
+const POKEMON_TCGCSV_PROMO_GROUPS: Record<number, { label?: string; date: string }> = {
+  22872: { label: "SV: Black Star Promos",           date: "2023-03-31" },
+  24451: { label: "Mega Evolution Promos",            date: "2025-09-26" },
+  24529: { label: "Player Placement Trainer Promos",  date: "2026-01-02" },
+  2545:  { label: "SWSH: Black Star Promos",          date: "2019-11-15" },
+  1861:  { label: "SM Promos",                        date: "2016-12-14" },
+  1451:  { label: "XY Promos",                        date: "2013-12-16" },
+  1407:  { label: "Black and White Promos",           date: "2011-04-25" },
+  1453:  { label: "HGSS Promos",                      date: "2010-02-01" },
+  1421:  { label: "Diamond and Pearl Promos",         date: "2007-05-01" },
+  24584: { label: "First Partner Collection 2026",    date: "2026-03-30" },
+  2776:  { label: "First Partner Pack",               date: "2021-02-26" },
+};
+
 const KNOWN_DATES: Record<number, string> = {
   1422: "2006-08-01", 1447: "2006-10-01", 1442: "2006-11-01",
   1452: "2007-02-01", 1439: "2007-08-01", 1432: "2008-03-01",
@@ -134,6 +153,23 @@ async function getTcgCsvSets(categoryId: number): Promise<SetInfo[]> {
   }));
 }
 
+// Fetch the specific tcgcsv promo groups we want to blend into the Pokémon list.
+// Returns SetInfo entries flagged with `source: "tcgcsv"` for routing purposes.
+async function getPokemonPromoSets(): Promise<SetInfo[]> {
+  const result: SetInfo[] = [];
+  for (const [gid, meta] of Object.entries(POKEMON_TCGCSV_PROMO_GROUPS)) {
+    result.push({
+      groupId:     gid,          // numeric tcgcsv groupId as string
+      name:        meta.label ?? `Pokémon Promos (${gid})`,
+      publishedOn: meta.date,
+      categoryId:  3,
+      source:      "tcgcsv",     // tells gallery page to use /api/market-set
+    });
+  }
+  // Sort by date descending
+  return result.sort((a, b) => (b.publishedOn ?? "").localeCompare(a.publishedOn ?? ""));
+}
+
 // ---------------------------------------------------------------------------
 // Route handler
 // ---------------------------------------------------------------------------
@@ -145,7 +181,20 @@ export async function GET(req: NextRequest) {
     let sets: SetInfo[];
 
     if (game === "pokemon") {
-      sets = await getPokemonSets();
+      // Merge pokemontcg.io sets + tcgcsv promo groups in one list
+      const [pkmnSets, promoSets] = await Promise.all([
+        getPokemonSets(),
+        getPokemonPromoSets(),
+      ]);
+      // Merge and sort by date descending
+      sets = [...pkmnSets, ...promoSets].sort((a, b) => {
+        const da = a.publishedOn ?? "";
+        const db = b.publishedOn ?? "";
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return db.localeCompare(da);
+      });
     } else {
       const categoryId = CATEGORY_ID[game];
       if (!categoryId) {
