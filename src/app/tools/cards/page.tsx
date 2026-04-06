@@ -75,9 +75,17 @@ type GameSlug = (typeof GAMES)[number]["slug"];
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Parse the date-only part of an ISO string as UTC to avoid timezone drift. */
+function parseDate(iso: string): Date {
+  // tcgcsv returns "2025-01-17T00:00:00" (no timezone) — treat as UTC date
+  const datePart = iso.split("T")[0]; // "2025-01-17"
+  const [y, m, d] = datePart.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short" });
+  return parseDate(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", timeZone: "UTC" });
 }
 
 // ---------------------------------------------------------------------------
@@ -168,7 +176,7 @@ function SetCard({ set, game }: { set: SetInfo; game: typeof GAMES[number] }) {
     });
   }
 
-  const year = set.publishedOn ? new Date(set.publishedOn).getFullYear() : null;
+  const year = set.publishedOn ? parseDate(set.publishedOn).getUTCFullYear() : null;
 
   return (
     <Link

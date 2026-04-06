@@ -114,7 +114,11 @@ function formatCents(cents: number | null): string {
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  // tcgcsv returns "2025-01-17T00:00:00" (no timezone) — parse as UTC date only
+  const datePart = iso.split("T")[0];
+  const [y, m, d] = datePart.split("-").map(Number);
+  const utcDate = new Date(Date.UTC(y, m - 1, d));
+  return utcDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
 }
 
 // ---------------------------------------------------------------------------
