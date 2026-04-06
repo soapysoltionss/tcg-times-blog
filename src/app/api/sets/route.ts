@@ -53,18 +53,33 @@ export async function GET(req: NextRequest) {
     const data = await res.json() as { results: TcgCsvGroup[] };
     const groups: TcgCsvGroup[] = data.results ?? [];
 
-    // Sort: newest first (by publishedOn, nulls last)
+    // tcgcsv sometimes bulk-updates old set metadata and stamps them with a
+    // migration timestamp (e.g. "2026-04-05T20:00:05"). Detect these as
+    // "dirty" dates and treat them as null for display purposes so we don't
+    // show ancient sets as if they released today.
+    const DIRTY_SUFFIX = "T20:00:05";
+
+    function cleanDate(iso: string | null): string | null {
+      if (!iso) return null;
+      if (iso.endsWith(DIRTY_SUFFIX)) return null;
+      return iso;
+    }
+
+    // Sort: newest first by cleanDate, then by groupId descending as tiebreaker
     const sorted = [...groups].sort((a, b) => {
-      if (!a.publishedOn && !b.publishedOn) return 0;
-      if (!a.publishedOn) return 1;
-      if (!b.publishedOn) return -1;
-      return b.publishedOn.localeCompare(a.publishedOn);
+      const da = cleanDate(a.publishedOn);
+      const db = cleanDate(b.publishedOn);
+      if (!da && !db) return b.groupId - a.groupId;
+      if (!da) return 1;
+      if (!db) return -1;
+      const cmp = db.localeCompare(da);
+      return cmp !== 0 ? cmp : b.groupId - a.groupId;
     });
 
     const sets: SetInfo[] = sorted.map(g => ({
       groupId:     g.groupId,
       name:        g.name,
-      publishedOn: g.publishedOn ?? null,
+      publishedOn: cleanDate(g.publishedOn),
       categoryId:  g.categoryId ?? categoryId,
     }));
 
