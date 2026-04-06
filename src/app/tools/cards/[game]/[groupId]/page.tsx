@@ -16,7 +16,7 @@ gsap.registerPlugin(ScrollTrigger);
 // ---------------------------------------------------------------------------
 
 interface CardData {
-  productId: number;
+  productId: number | string;
   name: string;
   cleanName: string;
   number: string | null;
@@ -25,10 +25,22 @@ interface CardData {
   marketPriceCents: number | null;
   midPriceCents: number | null;
   subTypeName: string;
+  priceUpdatedAt?: string | null;
+  cardmarketAvg?: {
+    avg1?: number | null;
+    avg7?: number | null;
+    avg30?: number | null;
+    trend?: number | null;
+    sell?: number | null;
+    rhAvg1?: number | null;
+    rhAvg7?: number | null;
+    rhAvg30?: number | null;
+    rhTrend?: number | null;
+  } | null;
 }
 
 interface SetData {
-  groupId: number;
+  groupId: number | string;
   name: string;
   game: string;
   categoryId: number;
@@ -281,8 +293,52 @@ function CardModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Placeholder price history — in a real app you'd fetch this
-  const mockPriceData: PricePoint[] = [];
+  // Price history: fetch real history for Pokémon cards; build synthetic from
+  // cardmarket avg data (already in the card) for other games / while loading
+  const [priceHistory, setPriceHistory] = useState<PricePoint[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Build a synthetic trend from cardmarket avg1/avg7/avg30 when we have it
+  function buildSyntheticHistory(card: CardData): PricePoint[] {
+    const cm = card.cardmarketAvg;
+    const today = card.marketPriceCents;
+    if (!cm || today == null) return [];
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const dAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+
+    // Convert EUR cardmarket values to USD using today's TCGPlayer price as anchor
+    const cmToday = cm.sell ?? cm.trend;
+    const ratio = (cmToday && cmToday > 0) ? today / Math.round(cmToday * 100) : 1.0;
+
+    const raw: PricePoint[] = [];
+    if (cm.avg30 != null) raw.push({ date: dAgo(30), priceCents: Math.round(Math.round(cm.avg30 * 100) * ratio) });
+    if (cm.avg7  != null) raw.push({ date: dAgo(7),  priceCents: Math.round(Math.round(cm.avg7  * 100) * ratio) });
+    if (cm.avg1  != null) raw.push({ date: dAgo(1),  priceCents: Math.round(Math.round(cm.avg1  * 100) * ratio) });
+    raw.push({ date: todayStr, priceCents: today });
+    return raw;
+  }
+
+  useEffect(() => {
+    // Only fetch real history for Pokémon; for other games build from cardmarket avg
+    if (game !== "pokemon") {
+      setPriceHistory(buildSyntheticHistory(card));
+      return;
+    }
+    // For Pokémon, immediately show synthetic while the real history loads
+    setPriceHistory(buildSyntheticHistory(card));
+    setHistoryLoading(true);
+    fetch(`/api/pokemon-price-history?cardId=${encodeURIComponent(String(card.productId))}`)
+      .then(r => r.json())
+      .then((d: { history?: PricePoint[] }) => {
+        if (d.history && d.history.length >= 2) {
+          setPriceHistory(d.history);
+        }
+        setHistoryLoading(false);
+      })
+      .catch(() => setHistoryLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [card.productId]);
 
   return (
     <div
@@ -387,11 +443,21 @@ function CardModal({
               </div>
             )}
 
-            {/* Price graph — placeholder until history API is wired up */}
-            {card.marketPriceCents != null && (
+            {/* Price graph — real history for Pokémon, cardmarket trend for others */}
+            {(card.marketPriceCents != null || priceHistory.length >= 2) && (
               <div className="mb-4">
-                <p className="label-upper text-[9px] text-[var(--text-muted)] mb-2">Price History</p>
-                <PriceGraph cardName={card.name} data={mockPriceData} />
+                <div className="flex items-center justify-between mb-2">
+                  <p className="label-upper text-[9px] text-[var(--text-muted)]">Price History</p>
+                  {historyLoading && (
+                    <span className="label-upper text-[8px] text-[var(--text-muted)] animate-pulse">loading…</span>
+                  )}
+                  {!historyLoading && game === "pokemon" && card.priceUpdatedAt && (
+                    <span className="label-upper text-[8px] text-[var(--text-muted)]">
+                      updated {card.priceUpdatedAt}
+                    </span>
+                  )}
+                </div>
+                <PriceGraph cardName={card.name} data={priceHistory} showDrawdown />
               </div>
             )}
 

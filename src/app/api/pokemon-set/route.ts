@@ -32,6 +32,24 @@ interface PkmnTcgPlayer {
   prices?: Record<string, PkmnPriceTier>;
 }
 
+interface PkmnCardMarket {
+  url?: string;
+  updatedAt?: string;
+  prices?: {
+    averageSellPrice?: number | null;
+    lowPrice?: number | null;
+    trendPrice?: number | null;
+    avg1?: number | null;
+    avg7?: number | null;
+    avg30?: number | null;
+    reverseHoloSell?: number | null;
+    reverseHoloTrend?: number | null;
+    reverseHoloAvg1?: number | null;
+    reverseHoloAvg7?: number | null;
+    reverseHoloAvg30?: number | null;
+  };
+}
+
 interface PkmnCard {
   id: string;
   name: string;
@@ -39,6 +57,7 @@ interface PkmnCard {
   rarity?: string;
   images: PkmnCardImages;
   tcgplayer?: PkmnTcgPlayer;
+  cardmarket?: PkmnCardMarket;
   set: {
     id: string;
     name: string;
@@ -136,7 +155,7 @@ export async function GET(req: NextRequest) {
 
     while (true) {
       const res = await fetch(
-        `${POKEMON_API}/cards?q=set.id:${encodeURIComponent(setId)}&orderBy=number&pageSize=250&page=${page}`,
+        `${POKEMON_API}/cards?q=set.id:${encodeURIComponent(setId)}&orderBy=number&pageSize=250&page=${page}&select=id,name,number,rarity,images,tcgplayer,cardmarket,set`,
         { headers, signal: AbortSignal.timeout(20_000), cache: "no-store" }
       );
       if (!res.ok) {
@@ -156,6 +175,22 @@ export async function GET(req: NextRequest) {
     // Map to the same shape as /api/market-set
     const cards = allCards.map(c => {
       const price = bestPrice(c.tcgplayer?.prices);
+      const cm = c.cardmarket?.prices;
+
+      // Build cardmarket avg snapshot — used by the price graph as fallback history
+      // avg1 = 1-day avg, avg7 = 7-day, avg30 = 30-day (all in €, but the trend shape is valid)
+      const cmAvg: Record<string, number | null> = {
+        avg1:  cm?.avg1  ?? null,
+        avg7:  cm?.avg7  ?? null,
+        avg30: cm?.avg30 ?? null,
+        trend: cm?.trendPrice ?? null,
+        sell:  cm?.averageSellPrice ?? null,
+        rhAvg1:  cm?.reverseHoloAvg1  ?? null,
+        rhAvg7:  cm?.reverseHoloAvg7  ?? null,
+        rhAvg30: cm?.reverseHoloAvg30 ?? null,
+        rhTrend: cm?.reverseHoloTrend ?? null,
+      };
+
       return {
         productId:        c.id,           // string e.g. "sv9-1"
         name:             c.name,
@@ -166,8 +201,8 @@ export async function GET(req: NextRequest) {
         marketPriceCents: price.marketPriceCents,
         midPriceCents:    price.midPriceCents,
         subTypeName:      price.subTypeName,
-        // Extra fields pokemontcg.io gives us
         priceUpdatedAt:   c.tcgplayer?.updatedAt ?? null,
+        cardmarketAvg:    cmAvg,
       };
     });
 
