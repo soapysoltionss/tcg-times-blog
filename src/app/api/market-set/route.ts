@@ -110,10 +110,12 @@ export async function GET(req: NextRequest) {
         const number = p.extNumber ?? ext["Number"] ?? null;
         const rarity = p.extRarity ?? ext["Rarity"] ?? null;
 
-        // Filter out sealed product (booster packs, binders, boxes) — they have
-        // no HP in extendedData and no card number. Keep products that have either
-        // a number, a rarity, or an HP value (i.e. they're actual cards).
-        const isCard = !!(number || rarity || ext["HP"]);
+        // Filter out non-playable products:
+        //   - Code cards (Rarity === "Code Card")
+        //   - Sealed product (boxes, packs, binders) — no HP and no card number
+        // A real card must have either HP or a collector number.
+        const isCodeCard = rarity === "Code Card";
+        const isCard = !isCodeCard && !!(ext["HP"] || number);
 
         return {
           productId:        p.productId,
@@ -148,7 +150,7 @@ export async function GET(req: NextRequest) {
       totalCards:  cards.length,
       cards,
     }, {
-      headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600" },
+      headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=300" },
     });
 
   } catch (err) {
