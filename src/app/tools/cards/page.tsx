@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -32,8 +33,9 @@ const GAMES = [
     shortLabel: "PKM",
     emoji: "⚡",
     accent: "#e3350d",
-    bg: "from-red-950/80 to-yellow-950/80",
-    border: "border-red-700/40",
+    accentMuted: "rgba(227,53,13,0.15)",
+    accentBorder: "rgba(227,53,13,0.35)",
+    accentText: "#ff6b4a",
     badge: "bg-red-900/60 text-red-200 border-red-700/50",
     description: "All sets from Scarlet & Violet, Sword & Shield, and beyond.",
   },
@@ -43,8 +45,9 @@ const GAMES = [
     shortLabel: "FaB",
     emoji: "🩸",
     accent: "#dc2626",
-    bg: "from-rose-950/80 to-red-950/80",
-    border: "border-rose-700/40",
+    accentMuted: "rgba(220,38,38,0.15)",
+    accentBorder: "rgba(220,38,38,0.35)",
+    accentText: "#f87171",
     badge: "bg-rose-900/60 text-rose-200 border-rose-700/50",
     description: "Every FaB set from Alpha to the latest release.",
   },
@@ -54,8 +57,9 @@ const GAMES = [
     shortLabel: "GA",
     emoji: "📖",
     accent: "#7c3aed",
-    bg: "from-violet-950/80 to-purple-950/80",
-    border: "border-violet-700/40",
+    accentMuted: "rgba(124,58,237,0.15)",
+    accentBorder: "rgba(124,58,237,0.35)",
+    accentText: "#a78bfa",
     badge: "bg-violet-900/60 text-violet-200 border-violet-700/50",
     description: "From Dawn of Ashes through the latest Grand Archive expansion.",
   },
@@ -65,8 +69,9 @@ const GAMES = [
     shortLabel: "OP",
     emoji: "🏴‍☠️",
     accent: "#d97706",
-    bg: "from-amber-950/80 to-orange-950/80",
-    border: "border-amber-700/40",
+    accentMuted: "rgba(217,119,6,0.15)",
+    accentBorder: "rgba(217,119,6,0.35)",
+    accentText: "#fbbf24",
     badge: "bg-amber-900/60 text-amber-200 border-amber-700/50",
     description: "All One Piece card sets from OP01 to present.",
   },
@@ -105,14 +110,14 @@ function SetGrid({ game, sets }: { game: typeof GAMES[number]; sets: SetInfo[] }
     const cards = Array.from(grid.querySelectorAll<HTMLElement>(".set-card"));
     gsap.fromTo(
       cards,
-      { opacity: 0, y: 40, scale: 0.95 },
+      { opacity: 0, y: 30, scale: 0.96 },
       {
         opacity: 1,
         y: 0,
         scale: 1,
-        duration: 0.45,
+        duration: 0.4,
         ease: "power2.out",
-        stagger: 0.035,
+        stagger: 0.03,
         clearProps: "transform,opacity",
         scrollTrigger: {
           trigger: grid,
@@ -146,7 +151,7 @@ function SetGrid({ game, sets }: { game: typeof GAMES[number]; sets: SetInfo[] }
 }
 
 // ---------------------------------------------------------------------------
-// SetCard — individual set tile with hover tilt effect
+// SetCard — clean glass tile with game-color top accent strip
 // ---------------------------------------------------------------------------
 
 function SetCard({ set, game }: { set: SetInfo; game: typeof GAMES[number] }) {
@@ -159,8 +164,8 @@ function SetCard({ set, game }: { set: SetInfo; game: typeof GAMES[number] }) {
     const cx = (e.clientX - rect.left) / rect.width  - 0.5;
     const cy = (e.clientY - rect.top)  / rect.height - 0.5;
     gsap.to(el, {
-      rotateY: cx * 14,
-      rotateX: -cy * 10,
+      rotateY: cx * 12,
+      rotateX: -cy * 8,
       duration: 0.2,
       ease: "power2.out",
       transformPerspective: 600,
@@ -185,36 +190,77 @@ function SetCard({ set, game }: { set: SetInfo; game: typeof GAMES[number] }) {
     <Link
       ref={cardRef}
       href={`/tools/cards/${game.slug}/${set.groupId}${set.source === "tcgcsv" ? "?src=tcgcsv" : ""}`}
-      className={`set-card group relative flex flex-col justify-between p-3.5 rounded-lg border ${game.border} bg-gradient-to-br ${game.bg} backdrop-blur-sm hover:brightness-110 transition-[filter] cursor-pointer`}
-      style={{ willChange: "transform", transformStyle: "preserve-3d" }}
+      className="set-card group relative flex flex-col overflow-hidden rounded-xl cursor-pointer"
+      style={{
+        willChange: "transform",
+        transformStyle: "preserve-3d",
+        background: "var(--card-bg, color-mix(in srgb, var(--foreground) 5%, var(--background)))",
+        border: `1px solid ${game.accentBorder}`,
+        boxShadow: `0 0 0 0 ${game.accentMuted}`,
+        transition: "box-shadow 0.2s ease, border-color 0.2s ease",
+      }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 24px ${game.accentMuted}, inset 0 1px 0 rgba(255,255,255,0.06)`;
+      }}
     >
-      {/* Year badge top-right */}
-      {year && (
-        <span className={`absolute top-2 right-2 label-upper text-[9px] px-1.5 py-0.5 rounded border ${game.badge}`}>
-          {year}
-        </span>
-      )}
+      {/* Accent top strip */}
+      <div
+        className="h-0.5 w-full shrink-0"
+        style={{ background: `linear-gradient(90deg, ${game.accent}, transparent)` }}
+      />
 
-      {/* Game emoji icon */}
-      <span className="text-2xl mb-3 block leading-none">{game.emoji}</span>
+      <div className="flex flex-col flex-1 p-3.5 gap-2.5">
+        {/* Top row: symbol + year */}
+        <div className="flex items-start justify-between gap-1">
+          {set.setSymbolUrl ? (
+            <Image
+              src={set.setSymbolUrl}
+              alt=""
+              width={28}
+              height={28}
+              className="object-contain opacity-80 group-hover:opacity-100 transition-opacity"
+              unoptimized
+            />
+          ) : (
+            <span className="text-xl leading-none">{game.emoji}</span>
+          )}
+          {year && (
+            <span
+              className="label-upper text-[9px] px-1.5 py-0.5 rounded shrink-0"
+              style={{
+                background: game.accentMuted,
+                color: game.accentText,
+                border: `1px solid ${game.accentBorder}`,
+              }}
+            >
+              {year}
+            </span>
+          )}
+        </div>
 
-      {/* Set name */}
-      <p
-        className="text-xs font-bold text-white/90 leading-snug group-hover:text-white transition-colors"
-        style={{ fontFamily: "var(--font-serif, serif)" }}
-      >
-        {set.name}
-      </p>
+        {/* Set name */}
+        <p
+          className="text-xs font-bold leading-snug text-[var(--foreground)] group-hover:opacity-80 transition-opacity line-clamp-3 flex-1"
+          style={{ fontFamily: "var(--font-serif, serif)" }}
+        >
+          {set.name}
+        </p>
 
-      {/* Date */}
-      <p className="label-upper text-[9px] text-white/40 mt-2">
-        {formatDate(set.publishedOn)}
-      </p>
-
-      {/* Arrow on hover */}
-      <span className="absolute bottom-2.5 right-3 text-white/0 group-hover:text-white/60 transition-colors text-xs">→</span>
+        {/* Footer: date + arrow */}
+        <div className="flex items-center justify-between">
+          <p className="label-upper text-[9px] text-[var(--text-muted)]">
+            {formatDate(set.publishedOn)}
+          </p>
+          <span
+            className="text-xs opacity-0 group-hover:opacity-60 transition-opacity"
+            style={{ color: game.accentText }}
+          >
+            →
+          </span>
+        </div>
+      </div>
     </Link>
   );
 }
@@ -229,10 +275,166 @@ function LoadingSkeleton() {
       {Array.from({ length: 18 }).map((_, i) => (
         <div
           key={i}
-          className="rounded-lg border border-white/10 bg-white/5 h-24 animate-pulse"
-          style={{ animationDelay: `${i * 0.04}s` }}
+          className="rounded-xl h-28 animate-pulse"
+          style={{
+            background: "color-mix(in srgb, var(--foreground) 6%, var(--background))",
+            border: "1px solid color-mix(in srgb, var(--foreground) 10%, var(--background))",
+            animationDelay: `${i * 0.04}s`,
+          }}
         />
       ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Card search types
+// ---------------------------------------------------------------------------
+
+interface CardSearchResult {
+  productId: number | string;
+  name: string;
+  imageUrl?: string | null;
+  marketPriceCents?: number | null;
+  rarity?: string;
+  setName?: string;
+  groupId?: string | number;
+}
+
+// ---------------------------------------------------------------------------
+// CardSearchResults — inline card hits shown below search bar
+// ---------------------------------------------------------------------------
+
+function CardSearchResults({
+  query,
+  game,
+  gameAccent,
+  gameAccentMuted,
+  gameAccentBorder,
+  gameAccentText,
+}: {
+  query: string;
+  game: string;
+  gameAccent: string;
+  gameAccentMuted: string;
+  gameAccentBorder: string;
+  gameAccentText: string;
+}) {
+  const [results, setResults] = useState<CardSearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState("");
+
+  const doSearch = useCallback(async (q: string) => {
+    if (!q.trim()) { setResults([]); setSearched(""); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/sets?game=${encodeURIComponent(game)}&cardSearch=${encodeURIComponent(q.trim())}`);
+      const data = await res.json();
+      setResults(data.cards ?? []);
+      setSearched(q.trim());
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [game]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => doSearch(query), 400);
+    return () => clearTimeout(timer);
+  }, [query, doSearch]);
+
+  if (!query.trim()) return null;
+
+  return (
+    <div className="mt-6">
+      <div className="flex items-center gap-3 mb-4">
+        <h3
+          className="text-sm font-bold text-[var(--foreground)]"
+          style={{ fontFamily: "var(--font-serif, serif)" }}
+        >
+          Card results
+        </h3>
+        {searched && (
+          <span className="label-upper text-[9px] text-[var(--text-muted)]">
+            for &ldquo;{searched}&rdquo;
+          </span>
+        )}
+        {loading && (
+          <span className="text-[10px] text-[var(--text-muted)] animate-pulse">Searching…</span>
+        )}
+      </div>
+
+      {!loading && searched && results.length === 0 && (
+        <p className="text-sm text-[var(--text-muted)] py-4">No cards found.</p>
+      )}
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        {results.map((card) => (
+          <Link
+            key={card.productId}
+            href={card.groupId ? `/tools/cards/${game}/${card.groupId}` : "#"}
+            className="group relative rounded-xl overflow-hidden flex flex-col"
+            style={{
+              background: "color-mix(in srgb, var(--foreground) 5%, var(--background))",
+              border: `1px solid ${gameAccentBorder}`,
+              transition: "box-shadow 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 20px ${gameAccentMuted}`;
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.boxShadow = "none";
+            }}
+          >
+            {/* Accent strip */}
+            <div
+              className="h-0.5 w-full shrink-0"
+              style={{ background: `linear-gradient(90deg, ${gameAccent}, transparent)` }}
+            />
+
+            {/* Card image */}
+            {card.imageUrl ? (
+              <div className="relative w-full aspect-[2.5/3.5] bg-black/20">
+                <Image
+                  src={card.imageUrl}
+                  alt={card.name}
+                  fill
+                  className="object-contain p-1.5"
+                  unoptimized
+                />
+              </div>
+            ) : (
+              <div
+                className="w-full aspect-[2.5/3.5] flex items-center justify-center text-3xl"
+                style={{ background: gameAccentMuted }}
+              >
+                🃏
+              </div>
+            )}
+
+            <div className="p-2.5 flex flex-col gap-1">
+              <p
+                className="text-xs font-bold leading-snug text-[var(--foreground)] line-clamp-2"
+                style={{ fontFamily: "var(--font-serif, serif)" }}
+              >
+                {card.name}
+              </p>
+              {card.rarity && (
+                <p className="label-upper text-[9px] text-[var(--text-muted)]">{card.rarity}</p>
+              )}
+              {card.marketPriceCents != null && card.marketPriceCents > 0 && (
+                <p
+                  className="label-upper text-[10px] font-bold"
+                  style={{ color: gameAccentText }}
+                >
+                  ${(card.marketPriceCents / 100).toFixed(2)}
+                </p>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
@@ -246,8 +448,11 @@ export default function CardsIndexPage() {
   const [sets, setSets] = useState<SetInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<"set" | "card">("set");
 
   const heroRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   // Hero entrance animation
   useEffect(() => {
@@ -283,6 +488,18 @@ export default function CardsIndexPage() {
   }, [activeGame]);
 
   const activeGameMeta = GAMES.find(g => g.slug === activeGame)!;
+
+  // Filter sets by search query (set mode) or show all (card mode)
+  const filteredSets = searchMode === "set" && searchQuery.trim()
+    ? sets.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : sets;
+
+  // Detect if query looks more like a card (>2 words or starts with a pokemon name hint)
+  function handleSearchInput(val: string) {
+    setSearchQuery(val);
+    // Auto-switch mode: if the query is long/specific, likely a card search
+    if (val.length > 18) setSearchMode("card");
+  }
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
@@ -347,7 +564,7 @@ export default function CardsIndexPage() {
       <div className="max-w-7xl mx-auto px-6 lg:px-10 py-8">
 
         {/* Game header */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-4">
+        <div className="mb-5 flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-4">
           <div>
             <h2
               className="text-2xl font-black text-[var(--foreground)] flex items-center gap-2"
@@ -365,16 +582,97 @@ export default function CardsIndexPage() {
           )}
         </div>
 
+        {/* ── Search bar ── */}
+        <div className="mb-6">
+          <div
+            className="flex items-center gap-3 rounded-xl px-4 py-3"
+            style={{
+              background: "color-mix(in srgb, var(--foreground) 5%, var(--background))",
+              border: `1px solid ${searchQuery ? activeGameMeta.accentBorder : "color-mix(in srgb, var(--foreground) 12%, var(--background))"}`,
+              transition: "border-color 0.2s ease",
+              boxShadow: searchQuery ? `0 0 0 3px ${activeGameMeta.accentMuted}` : "none",
+            }}
+          >
+            {/* Search icon */}
+            <svg
+              width="15" height="15" viewBox="0 0 15 15" fill="none"
+              className="shrink-0 opacity-40"
+              style={{ color: searchQuery ? activeGameMeta.accentText : "var(--foreground)" }}
+            >
+              <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M10 10l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+
+            <input
+              ref={searchRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearchInput(e.target.value)}
+              placeholder={`Search sets or cards in ${activeGameMeta.label}…`}
+              className="flex-1 bg-transparent text-sm text-[var(--foreground)] placeholder:text-[var(--text-muted)] outline-none"
+            />
+
+            {/* Mode toggle */}
+            <div
+              className="flex items-center rounded-lg overflow-hidden shrink-0"
+              style={{ border: `1px solid color-mix(in srgb, var(--foreground) 12%, var(--background))` }}
+            >
+              {(["set", "card"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setSearchMode(mode)}
+                  className="px-2.5 py-1 label-upper text-[9px] transition-colors"
+                  style={{
+                    background: searchMode === mode ? activeGameMeta.accentMuted : "transparent",
+                    color: searchMode === mode ? activeGameMeta.accentText : "var(--text-muted)",
+                  }}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+
+            {/* Clear */}
+            {searchQuery && (
+              <button
+                onClick={() => { setSearchQuery(""); searchRef.current?.focus(); }}
+                className="shrink-0 text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors text-sm leading-none"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Error */}
         {error && (
           <div className="text-red-400 text-sm text-center py-10">{error}</div>
         )}
 
-        {/* Sets grid */}
-        {loading
-          ? <LoadingSkeleton />
-          : <SetGrid game={activeGameMeta} sets={sets} />
-        }
+        {/* Card search results (card mode with query) */}
+        {searchMode === "card" && searchQuery.trim() ? (
+          <CardSearchResults
+            query={searchQuery}
+            game={activeGame}
+            gameAccent={activeGameMeta.accent}
+            gameAccentMuted={activeGameMeta.accentMuted}
+            gameAccentBorder={activeGameMeta.accentBorder}
+            gameAccentText={activeGameMeta.accentText}
+          />
+        ) : (
+          /* Sets grid (with optional set-name filter) */
+          <>
+            {searchMode === "set" && searchQuery.trim() && !loading && (
+              <p className="text-xs text-[var(--text-muted)] mb-4">
+                {filteredSets.length} set{filteredSets.length !== 1 ? "s" : ""} matching &ldquo;{searchQuery}&rdquo;
+              </p>
+            )}
+            {loading
+              ? <LoadingSkeleton />
+              : <SetGrid game={activeGameMeta} sets={filteredSets} />
+            }
+          </>
+        )}
       </div>
     </div>
   );

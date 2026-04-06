@@ -171,12 +171,115 @@ async function getPokemonPromoSets(): Promise<SetInfo[]> {
 }
 
 // ---------------------------------------------------------------------------
+// Card search helpers
+// ---------------------------------------------------------------------------
+
+interface CardSearchResult {
+  productId: number | string;
+  name: string;
+  imageUrl?: string | null;
+  marketPriceCents?: number | null;
+  rarity?: string;
+  setName?: string;
+  groupId?: string | number;
+}
+
+async function searchPokemonCards(q: string): Promise<CardSearchResult[]> {
+  const headers: Record<string, string> = { "User-Agent": "tcgtimes-blog/1.0" };
+  const apiKey = process.env.POKEMON_TCG_API_KEY;
+  if (apiKey) headers["X-Api-Key"] = apiKey;
+
+  const res = await fetch(
+    `${POKEMON_API}/cards?q=name:"${encodeURIComponent(q)}*"&select=id,name,rarity,images,tcgplayer,set&pageSize=18`,
+    { headers, signal: AbortSignal.timeout(10_000), cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  const data = await res.json() as { data: Array<{
+    id: string; name: string; rarity?: string;
+    images: { small: string };
+    tcgplayer?: { prices?: Record<string, { market?: number }> };
+    set: { id: string; name: string };
+  }> };
+
+  return (data.data ?? []).map(c => {
+    const prices = c.tcgplayer?.prices ?? {};
+    const pref = ["holofoil","reverseHolofoil","normal","1stEditionHolofoil"];
+    let market: number | null = null;
+    for (const k of pref) {
+      const v = prices[k]?.market;
+      if (v != null && v > 0) { market = v; break; }
+    }
+    if (!market) {
+      const vals = Object.values(prices).map(p => p.market).filter((v): v is number => !!v && v > 0);
+      if (vals.length) market = Math.max(...vals);
+    }
+    return {
+      productId:        c.id,
+      name:             c.name,
+      imageUrl:         c.images?.small ?? null,
+      marketPriceCents: market ? Math.round(market * 100) : null,
+      rarity:           c.rarity,
+      setName:          c.set?.name,
+      groupId:          c.set?.id,
+    };
+  });
+}
+
+async function searchTcgCsvCards(categoryId: number, q: string): Promise<CardSearchResult[]> {
+  // tcgcsv doesn't have a text search API — fetch all groups then search products
+  // For performance, we do a name-based filter on the fly using a recent-groups sample
+  const res = await fetch(`${TCGCSV}/${categoryId}/products?nameStartsWith=${encodeURIComponent(q)}&limit=18`, {
+    signal: AbortSignal.timeout(10_000),
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  const data = await res.json() as { results?: Array<{
+    productId: number; name: string; imageUrl?: string;
+    groupId?: number;
+    extendedData?: Array<{ name: string; value: string }>;
+  }> };
+
+  const results = data.results ?? [];
+  return results.slice(0, 18).map(p => {
+    const ext: Record<string,string> = {};
+    for (const e of p.extendedData ?? []) ext[e.name] = e.value;
+    return {
+      productId: p.productId,
+      name:      p.name,
+      imageUrl:  p.imageUrl ?? `https://tcgplayer-cdn.tcgplayer.com/product/${p.productId}_200w.jpg`,
+      rarity:    ext["Rarity"] ?? undefined,
+      groupId:   p.groupId,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Route handler
 // ---------------------------------------------------------------------------
 
 export async function GET(req: NextRequest) {
   const game = req.nextUrl.searchParams.get("game") ?? "";
+  const cardSearch = req.nextUrl.searchParams.get("cardSearch") ?? "";
 
+  // ── Card search mode ──────────────────────────────────────────────────────
+  if (cardSearch.trim()) {
+    try {
+      let cards: CardSearchResult[];
+      if (game === "pokemon") {
+        cards = await searchPokemonCards(cardSearch.trim());
+      } else {
+        const categoryId = CATEGORY_ID[game];
+        if (!categoryId) return NextResponse.json({ cards: [] });
+        cards = await searchTcgCsvCards(categoryId, cardSearch.trim());
+      }
+      return NextResponse.json({ cards });
+    } catch (err) {
+      console.error("[api/sets cardSearch]", err);
+      return NextResponse.json({ cards: [] });
+    }
+  }
+
+  // ── Sets list mode (original) ─────────────────────────────────────────────
   try {
     let sets: SetInfo[];
 
