@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
   try {
     const res = await fetch(`${TCGCSV}/${categoryId}/groups`, {
       signal: AbortSignal.timeout(15_000),
-      next: { revalidate: 86400 },
+      cache: "no-store",
     });
     if (!res.ok) {
       return NextResponse.json({ error: `tcgcsv returned ${res.status}` }, { status: 502 });
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(
       { game, categoryId, sets },
-      { headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600" } },
+      { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=300" } },
     );
   } catch (err) {
     console.error("[api/sets]", err);

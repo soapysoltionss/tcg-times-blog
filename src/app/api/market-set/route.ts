@@ -48,7 +48,7 @@ interface TcgCsvPrice {
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url, {
     signal: AbortSignal.timeout(15_000),
-    next: { revalidate: 86400 },
+    cache: "no-store",
   });
   if (!res.ok) throw new Error(`${url}: ${res.status}`);
   return res.json() as Promise<T>;
