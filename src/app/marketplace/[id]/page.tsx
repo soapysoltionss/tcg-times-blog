@@ -391,6 +391,7 @@ export default function ListingDetailPage() {
                 <FlipCard
                   frontSrc={listing.imageUrl}
                   alt={listing.cardName}
+                  game={listing.game}
                   className="w-full shadow-md"
                 />
               ) : (

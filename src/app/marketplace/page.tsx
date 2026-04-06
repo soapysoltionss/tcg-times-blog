@@ -749,6 +749,7 @@ function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
               <FlipCard
                 frontSrc={imageUrl}
                 backSrc={backImageUrl}
+                game={game}
                 alt={cardName}
                 className="w-full max-w-[200px] shadow-md"
               />

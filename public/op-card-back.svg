@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 700" width="500" height="700">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#8B0000"/>
+      <stop offset="100%" stop-color="#1a0000"/>
+    </radialGradient>
+    <radialGradient id="logoGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFD700" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#FFD700" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="crosshatch" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="30" y2="30" stroke="#5a0000" stroke-width="0.5" opacity="0.5"/>
+      <line x1="30" y1="0" x2="0" y2="30" stroke="#5a0000" stroke-width="0.5" opacity="0.5"/>
+    </pattern>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="500" height="700" fill="url(#bgGrad)" rx="18" ry="18"/>
+  <!-- Crosshatch texture -->
+  <rect width="500" height="700" fill="url(#crosshatch)" rx="18" ry="18"/>
+
+  <!-- Outer border -->
+  <rect x="8" y="8" width="484" height="684" rx="14" ry="14" fill="none" stroke="#FFD700" stroke-width="3" opacity="0.9"/>
+  <!-- Inner border -->
+  <rect x="18" y="18" width="464" height="664" rx="10" ry="10" fill="none" stroke="#FFD700" stroke-width="1" opacity="0.5"/>
+
+  <!-- Corner ornaments -->
+  <g fill="#FFD700" opacity="0.8">
+    <!-- Top-left -->
+    <polygon points="30,30 50,30 30,50" opacity="0.7"/>
+    <circle cx="30" cy="30" r="4"/>
+    <!-- Top-right -->
+    <polygon points="470,30 450,30 470,50" opacity="0.7"/>
+    <circle cx="470" cy="30" r="4"/>
+    <!-- Bottom-left -->
+    <polygon points="30,670 50,670 30,650" opacity="0.7"/>
+    <circle cx="30" cy="670" r="4"/>
+    <!-- Bottom-right -->
+    <polygon points="470,670 450,670 470,650" opacity="0.7"/>
+    <circle cx="470" cy="670" r="4"/>
+  </g>
+
+  <!-- Center glow -->
+  <circle cx="250" cy="350" r="160" fill="url(#logoGlow)"/>
+
+  <!-- Straw Hat silhouette (iconic OP symbol) -->
+  <g transform="translate(250, 340)" filter="url(#glow)">
+    <!-- Hat brim -->
+    <ellipse cx="0" cy="30" rx="110" ry="22" fill="#1a0000" stroke="#FFD700" stroke-width="3"/>
+    <!-- Hat body -->
+    <path d="M-72,30 Q-60,-20 0,-50 Q60,-20 72,30 Z" fill="#c8000a" stroke="#FFD700" stroke-width="3"/>
+    <!-- Hat band -->
+    <path d="M-68,18 Q0,-5 68,18" stroke="#FFD700" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <!-- Red band stripe -->
+    <path d="M-68,18 Q0,-5 68,18 Q60,28 72,30 Q0,8 -72,30 Z" fill="#8B0000" opacity="0.6"/>
+    <!-- Band ribbon left -->
+    <path d="M-68,18 L-82,10 L-75,22 L-90,30 L-72,28 Z" fill="#FFD700" opacity="0.8"/>
+    <!-- Band ribbon right -->
+    <path d="M68,18 L82,10 L75,22 L90,30 L72,28 Z" fill="#FFD700" opacity="0.8"/>
+  </g>
+
+  <!-- ONE PIECE text -->
+  <text x="250" y="520" font-family="Georgia, serif" font-size="36" font-weight="bold" fill="#FFD700" text-anchor="middle" letter-spacing="8" filter="url(#glow)">ONE PIECE</text>
+  <text x="250" y="555" font-family="Georgia, serif" font-size="14" fill="#FFD700" text-anchor="middle" letter-spacing="5" opacity="0.7">CARD GAME</text>
+
+  <!-- Decorative lines -->
+  <line x1="60" y1="540" x2="180" y2="540" stroke="#FFD700" stroke-width="1" opacity="0.5"/>
+  <line x1="320" y1="540" x2="440" y2="540" stroke="#FFD700" stroke-width="1" opacity="0.5"/>
+
+  <!-- Small skull/crossbones motif bottom -->
+  <g transform="translate(250, 620)" opacity="0.5">
+    <circle cx="0" cy="-8" r="12" fill="none" stroke="#FFD700" stroke-width="1.5"/>
+    <circle cx="-5" cy="-10" r="3" fill="#FFD700"/>
+    <circle cx="5" cy="-10" r="3" fill="#FFD700"/>
+    <line x1="-12" y1="2" x2="12" y2="-16" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="12" y1="2" x2="-12" y2="-16" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Top decorative text -->
+  <text x="250" y="120" font-family="Georgia, serif" font-size="13" fill="#FFD700" text-anchor="middle" letter-spacing="4" opacity="0.6">✦ GRAND LINE ✦</text>
+</svg>
