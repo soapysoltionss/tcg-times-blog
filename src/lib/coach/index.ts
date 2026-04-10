@@ -9,8 +9,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { AgentIntent, CoachMessage, CoachResult, ModelChoice, RegionContext, TierLevel } from "./types";
 import { ROUTER_PROMPT, OFF_TOPIC_PROMPT, buildSystemPrompt } from "./prompts";
-import { ROUTER_MODEL, MODEL_OPTIONS, TIER_LIMITS, resolveModel, effectiveModelChoice } from "./models";
-import { callClaude, callGPT, callGemini } from "./dispatch";
+import { ROUTER_MODEL, MODEL_OPTIONS, TIER_LIMITS, resolveModel, effectiveModelChoice, QWEN_MODEL } from "./models";
+import { callClaude, callQwen } from "./dispatch";
 
 // ---------------------------------------------------------------------------
 // Intent classification (always Claude Haiku — cheap + fast router)
@@ -71,7 +71,7 @@ export async function runCoach(
   messages: CoachMessage[],
   tier: TierLevel,
   region: RegionContext = {},
-  modelChoice: ModelChoice = "claude"
+  modelChoice: ModelChoice = "qwen"
 ): Promise<CoachResult> {
   const chosen = effectiveModelChoice(modelChoice, tier);
   const chosenMeta = MODEL_OPTIONS.find((m) => m.id === chosen)!;
@@ -96,17 +96,12 @@ export async function runCoach(
     };
   }
 
-  const model = resolveModel(chosen, tier);
+  const model = resolveModel(chosen, tier); // always returns QWEN_MODEL
   const system = buildSystemPrompt(intent, region);
 
-  let reply: string;
-  if (chosen === "gpt") {
-    reply = await callGPT(model, system, messages);
-  } else if (chosen === "gemini") {
-    reply = await callGemini(model, system, messages);
-  } else {
-    reply = await callClaude(anthropicClient, model, system, messages);
-  }
+  // All main responses use Qwen via OpenRouter (free, powerful)
+  // Claude is only used above for the cheap router/guard steps
+  const reply = await callQwen(model, system, messages);
 
   return { reply, intent, model, provider: chosenMeta.provider };
 }

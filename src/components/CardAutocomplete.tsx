@@ -60,6 +60,7 @@ export default function CardAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const debouncedQuery = useDebounce(value, 300);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Reset results when game changes
   useEffect(() => {
@@ -69,17 +70,22 @@ export default function CardAutocomplete({
 
   // Fetch suggestions whenever the debounced query changes
   const fetchSuggestions = useCallback(async (q: string) => {
+    // Cancel any in-flight request
+    abortRef.current?.abort();
     if (q.length < 2) { setResults([]); setOpen(false); return; }
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     try {
       const endpoint = ENDPOINT[game] ?? ENDPOINT["flesh-and-blood"];
-      const res = await fetch(`${endpoint}?q=${encodeURIComponent(q)}`);
+      const res = await fetch(`${endpoint}?q=${encodeURIComponent(q)}`, { signal: controller.signal });
       const data = await res.json();
       setResults(data.cards ?? []);
       setOpen((data.cards ?? []).length > 0);
       setActiveIdx(-1);
-    } catch {
-      setResults([]);
+    } catch (err) {
+      // Ignore aborted requests — don't wipe results
+      if ((err as { name?: string }).name !== "AbortError") setResults([]);
     } finally {
       setLoading(false);
     }
@@ -101,6 +107,9 @@ export default function CardAutocomplete({
   }, []);
 
   function handleSelect(card: AnyCardResult) {
+    // Kill any pending fetch so it can't re-open the dropdown
+    abortRef.current?.abort();
+    abortRef.current = null;
     onSelect(card);
     setOpen(false);
     setResults([]);

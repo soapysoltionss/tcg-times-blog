@@ -32,23 +32,25 @@ const GAMES = [
     label: "Pokémon",
     shortLabel: "PKM",
     emoji: "⚡",
-    accent: "#e3350d",
-    accentMuted: "rgba(227,53,13,0.15)",
-    accentBorder: "rgba(227,53,13,0.35)",
-    accentText: "#ff6b4a",
-    badge: "bg-red-900/60 text-red-200 border-red-700/50",
-    description: "All sets from Scarlet & Violet, Sword & Shield, and beyond.",
+    // Market green — "price is up"
+    accent: "#16a34a",
+    accentMuted: "rgba(22,163,74,0.12)",
+    accentBorder: "rgba(22,163,74,0.30)",
+    accentText: "#4ade80",
+    badge: "bg-green-900/60 text-green-200 border-green-700/50",
+    description: "Every Pokémon set ever printed — from Base Set (1999) through Scarlet & Violet and beyond.",
   },
   {
     slug: "flesh-and-blood",
     label: "Flesh and Blood",
     shortLabel: "FaB",
     emoji: "🩸",
-    accent: "#dc2626",
-    accentMuted: "rgba(220,38,38,0.15)",
-    accentBorder: "rgba(220,38,38,0.35)",
-    accentText: "#f87171",
-    badge: "bg-rose-900/60 text-rose-200 border-rose-700/50",
+    // Ticker-chart blue — Bloomberg terminal style
+    accent: "#0284c7",
+    accentMuted: "rgba(2,132,199,0.12)",
+    accentBorder: "rgba(2,132,199,0.30)",
+    accentText: "#38bdf8",
+    badge: "bg-sky-900/60 text-sky-200 border-sky-700/50",
     description: "Every FaB set from Alpha to the latest release.",
   },
   {
@@ -56,11 +58,12 @@ const GAMES = [
     label: "Grand Archive",
     shortLabel: "GA",
     emoji: "📖",
-    accent: "#7c3aed",
-    accentMuted: "rgba(124,58,237,0.15)",
-    accentBorder: "rgba(124,58,237,0.35)",
-    accentText: "#a78bfa",
-    badge: "bg-violet-900/60 text-violet-200 border-violet-700/50",
+    // Data-terminal teal
+    accent: "#0f766e",
+    accentMuted: "rgba(15,118,110,0.12)",
+    accentBorder: "rgba(15,118,110,0.30)",
+    accentText: "#2dd4bf",
+    badge: "bg-teal-900/60 text-teal-200 border-teal-700/50",
     description: "From Dawn of Ashes through the latest Grand Archive expansion.",
   },
   {
@@ -68,9 +71,10 @@ const GAMES = [
     label: "One Piece TCG",
     shortLabel: "OP",
     emoji: "🏴‍☠️",
-    accent: "#d97706",
-    accentMuted: "rgba(217,119,6,0.15)",
-    accentBorder: "rgba(217,119,6,0.35)",
+    // Gold / commodity
+    accent: "#b45309",
+    accentMuted: "rgba(180,83,9,0.12)",
+    accentBorder: "rgba(180,83,9,0.30)",
     accentText: "#fbbf24",
     badge: "bg-amber-900/60 text-amber-200 border-amber-700/50",
     description: "All One Piece card sets from OP01 to present.",
@@ -97,51 +101,112 @@ function formatDate(iso: string | null): string {
 }
 
 // ---------------------------------------------------------------------------
-// SetGrid — renders a game's sets with GSAP stagger
+// SetGrid — grouped by year, each year collapsible
 // ---------------------------------------------------------------------------
 
 function SetGrid({ game, sets }: { game: typeof GAMES[number]; sets: SetInfo[] }) {
-  const gridRef = useRef<HTMLDivElement>(null);
+  // Group sets by year, preserving sort order within each year
+  const grouped = sets.reduce<Record<string, SetInfo[]>>((acc, s) => {
+    const y = s.publishedOn ? String(parseDate(s.publishedOn).getUTCFullYear()) : "—";
+    (acc[y] ??= []).push(s);
+    return acc;
+  }, {});
 
+  // Years sorted newest first; "—" goes to end
+  const years = Object.keys(grouped).sort((a, b) => {
+    if (a === "—") return 1;
+    if (b === "—") return -1;
+    return Number(b) - Number(a);
+  });
+
+  // Most recent year open by default
+  const [openYear, setOpenYear] = useState<string>(years[0] ?? "");
+
+  // Re-open most recent when game changes
   useEffect(() => {
-    const grid = gridRef.current;
-    if (!grid || sets.length === 0) return;
-
-    const cards = Array.from(grid.querySelectorAll<HTMLElement>(".set-card"));
-    gsap.fromTo(
-      cards,
-      { opacity: 0, y: 30, scale: 0.96 },
-      {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        duration: 0.4,
-        ease: "power2.out",
-        stagger: 0.03,
-        clearProps: "transform,opacity",
-        scrollTrigger: {
-          trigger: grid,
-          start: "top 90%",
-          once: true,
-        },
-      }
-    );
-
-    return () => { ScrollTrigger.getAll().forEach(t => t.kill()); };
-  }, [sets]);
+    setOpenYear(years[0] ?? "");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.slug]);
 
   if (sets.length === 0) {
     return (
-      <div className="text-center py-16 text-[var(--text-muted)] text-sm">
+      <div className="py-24 text-center text-sm" style={{ color: "var(--text-muted)" }}>
         No sets found.
       </div>
     );
   }
 
   return (
+    <div style={{ borderTop: "1px solid var(--border)" }}>
+      {years.map((year) => {
+        const isOpen = openYear === year;
+        const count = grouped[year].length;
+        return (
+          <div key={year} style={{ borderBottom: "1px solid var(--border)" }}>
+            {/* Year header — click to open/close */}
+            <button
+              onClick={() => setOpenYear(isOpen ? "" : year)}
+              className="w-full flex items-center justify-between px-6 py-4 group"
+              style={{ background: isOpen ? "var(--muted)" : "var(--background)", transition: "background 0.15s" }}
+            >
+              <div className="flex items-baseline gap-4">
+                <span
+                  className="font-bold"
+                  style={{
+                    fontFamily: "var(--font-serif, serif)",
+                    fontSize: "clamp(1.4rem, 3vw, 2rem)",
+                    color: isOpen ? game.accent : "var(--foreground)",
+                    transition: "color 0.15s",
+                  }}
+                >
+                  {year}
+                </span>
+                <span className="label-upper text-[9px]" style={{ color: "var(--text-muted)" }}>
+                  {count} set{count !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <span
+                className="label-upper text-[9px] transition-transform duration-200"
+                style={{
+                  color: "var(--text-muted)",
+                  transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                  display: "inline-block",
+                }}
+              >
+                ↓
+              </span>
+            </button>
+
+            {/* Set grid for this year */}
+            {isOpen && (
+              <YearGrid sets={grouped[year]} game={game} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function YearGrid({ sets, game }: { sets: SetInfo[]; game: typeof GAMES[number] }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const cards = Array.from(el.querySelectorAll<HTMLElement>(".set-card"));
+    gsap.fromTo(
+      cards,
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 0.35, ease: "power2.out", stagger: 0.04, clearProps: "transform,opacity" }
+    );
+  }, []);
+
+  return (
     <div
-      ref={gridRef}
-      className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
+      ref={ref}
+      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+      style={{ borderTop: "1px solid var(--border)", borderLeft: "1px solid var(--border)" }}
     >
       {sets.map((set) => (
         <SetCard key={set.groupId} set={set} game={game} />
@@ -151,115 +216,79 @@ function SetGrid({ game, sets }: { game: typeof GAMES[number]; sets: SetInfo[] }
 }
 
 // ---------------------------------------------------------------------------
-// SetCard — clean glass tile with game-color top accent strip
+// SetCard — Ravi Klaassens-inspired: dark, tall, typographic, minimal
 // ---------------------------------------------------------------------------
 
 function SetCard({ set, game }: { set: SetInfo; game: typeof GAMES[number] }) {
-  const cardRef = useRef<HTMLAnchorElement>(null);
-
-  function handleMouseMove(e: React.MouseEvent<HTMLAnchorElement>) {
-    const el = cardRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const cx = (e.clientX - rect.left) / rect.width  - 0.5;
-    const cy = (e.clientY - rect.top)  / rect.height - 0.5;
-    gsap.to(el, {
-      rotateY: cx * 12,
-      rotateX: -cy * 8,
-      duration: 0.2,
-      ease: "power2.out",
-      transformPerspective: 600,
-    });
-  }
-
-  function handleMouseLeave() {
-    const el = cardRef.current;
-    if (!el) return;
-    gsap.to(el, {
-      rotateY: 0,
-      rotateX: 0,
-      duration: 0.5,
-      ease: "elastic.out(1, 0.6)",
-      transformPerspective: 600,
-    });
-  }
-
   const year = set.publishedOn ? parseDate(set.publishedOn).getUTCFullYear() : null;
+  const month = set.publishedOn
+    ? parseDate(set.publishedOn).toLocaleDateString("en-US", { month: "short", timeZone: "UTC" })
+    : null;
 
   return (
     <Link
-      ref={cardRef}
       href={`/tools/cards/${game.slug}/${set.groupId}${set.source === "tcgcsv" ? "?src=tcgcsv" : ""}`}
-      className="set-card group relative flex flex-col overflow-hidden rounded-xl cursor-pointer"
+      className="set-card group relative flex flex-col justify-between overflow-hidden cursor-pointer"
       style={{
-        willChange: "transform",
-        transformStyle: "preserve-3d",
-        background: "var(--card-bg, color-mix(in srgb, var(--foreground) 5%, var(--background)))",
-        border: `1px solid ${game.accentBorder}`,
-        boxShadow: `0 0 0 0 ${game.accentMuted}`,
-        transition: "box-shadow 0.2s ease, border-color 0.2s ease",
-      }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 24px ${game.accentMuted}, inset 0 1px 0 rgba(255,255,255,0.06)`;
+        borderRight: "1px solid var(--border)",
+        borderBottom: "1px solid var(--border)",
+        background: "var(--background)",
+        minHeight: "11rem",
+        padding: "1.5rem 1.4rem 1.1rem",
       }}
     >
-      {/* Accent top strip */}
+      {/* Accent line — CSS transition, scoped to this card via group */}
       <div
-        className="h-0.5 w-full shrink-0"
-        style={{ background: `linear-gradient(90deg, ${game.accent}, transparent)` }}
+        className="absolute top-0 left-0 right-0 h-[2px] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out"
+        style={{ background: game.accent }}
       />
 
-      <div className="flex flex-col flex-1 p-3.5 gap-2.5">
-        {/* Top row: symbol + year */}
-        <div className="flex items-start justify-between gap-1">
-          {set.setSymbolUrl ? (
-            <Image
-              src={set.setSymbolUrl}
-              alt=""
-              width={28}
-              height={28}
-              className="object-contain opacity-80 group-hover:opacity-100 transition-opacity"
-              unoptimized
-            />
-          ) : (
-            <span className="text-xl leading-none">{game.emoji}</span>
-          )}
-          {year && (
-            <span
-              className="label-upper text-[9px] px-1.5 py-0.5 rounded shrink-0"
-              style={{
-                background: game.accentMuted,
-                color: game.accentText,
-                border: `1px solid ${game.accentBorder}`,
-              }}
-            >
-              {year}
-            </span>
-          )}
-        </div>
-
-        {/* Set name */}
-        <p
-          className="text-xs font-bold leading-snug text-[var(--foreground)] group-hover:opacity-80 transition-opacity line-clamp-3 flex-1"
-          style={{ fontFamily: "var(--font-serif, serif)" }}
+      {/* Top row: game tag + symbol */}
+      <div className="flex items-center justify-between mb-3">
+        <span
+          className="label-upper text-[8px] tracking-[0.18em]"
+          style={{ color: game.accent }}
         >
-          {set.name}
-        </p>
+          {game.shortLabel}
+        </span>
+        {set.setSymbolUrl ? (
+          <Image
+            src={set.setSymbolUrl}
+            alt="" width={14} height={14}
+            className="object-contain opacity-30 group-hover:opacity-70 transition-opacity duration-300"
+            unoptimized
+          />
+        ) : (
+          <span className="text-[11px] opacity-25 group-hover:opacity-60 transition-opacity">{game.emoji}</span>
+        )}
+      </div>
 
-        {/* Footer: date + arrow */}
-        <div className="flex items-center justify-between">
-          <p className="label-upper text-[9px] text-[var(--text-muted)]">
-            {formatDate(set.publishedOn)}
-          </p>
-          <span
-            className="text-xs opacity-0 group-hover:opacity-60 transition-opacity"
-            style={{ color: game.accentText }}
-          >
-            →
-          </span>
-        </div>
+      {/* Set name */}
+      <p
+        className="flex-1 font-bold leading-[1.2] line-clamp-3 -translate-y-0 group-hover:-translate-y-0.5 transition-transform duration-300 ease-out"
+        style={{
+          fontFamily: "var(--font-serif, serif)",
+          fontSize: "clamp(0.9rem, 1.3vw, 1.05rem)",
+          color: "var(--foreground)",
+        }}
+      >
+        {set.name}
+      </p>
+
+      {/* Footer */}
+      <div
+        className="flex items-end justify-between mt-3 pt-2.5"
+        style={{ borderTop: "1px solid var(--border)" }}
+      >
+        <span className="label-upper text-[8px]" style={{ color: "var(--text-muted)" }}>
+          {month && year ? `${month} ${year}` : "—"}
+        </span>
+        <span
+          className="label-upper text-[9px] font-bold opacity-0 translate-x-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200 ease-out"
+          style={{ color: game.accent }}
+        >
+          View →
+        </span>
       </div>
     </Link>
   );
@@ -271,14 +300,19 @@ function SetCard({ set, game }: { set: SetInfo; game: typeof GAMES[number] }) {
 
 function LoadingSkeleton() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-      {Array.from({ length: 18 }).map((_, i) => (
+    <div
+      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+      style={{ borderTop: "1px solid var(--border)", borderLeft: "1px solid var(--border)" }}
+    >
+      {Array.from({ length: 12 }).map((_, i) => (
         <div
           key={i}
-          className="rounded-xl h-28 animate-pulse"
+          className="animate-pulse"
           style={{
-            background: "color-mix(in srgb, var(--foreground) 6%, var(--background))",
-            border: "1px solid color-mix(in srgb, var(--foreground) 10%, var(--background))",
+            height: "11rem",
+            borderRight: "1px solid var(--border)",
+            borderBottom: "1px solid var(--border)",
+            background: "var(--muted)",
             animationDelay: `${i * 0.04}s`,
           }}
         />
@@ -302,16 +336,13 @@ interface CardSearchResult {
 }
 
 // ---------------------------------------------------------------------------
-// CardSearchResults — inline card hits shown below search bar
+// CardSearchResults
 // ---------------------------------------------------------------------------
 
 function CardSearchResults({
   query,
   game,
   gameAccent,
-  gameAccentMuted,
-  gameAccentBorder,
-  gameAccentText,
 }: {
   query: string;
   game: string;
@@ -347,87 +378,86 @@ function CardSearchResults({
   if (!query.trim()) return null;
 
   return (
-    <div className="mt-6">
-      <div className="flex items-center gap-3 mb-4">
+    <div className="mt-8">
+      {/* Header */}
+      <div className="flex items-baseline gap-4 mb-5" style={{ borderBottom: "1px solid var(--border)", paddingBottom: "0.75rem" }}>
         <h3
-          className="text-sm font-bold text-[var(--foreground)]"
-          style={{ fontFamily: "var(--font-serif, serif)" }}
+          className="text-base font-bold"
+          style={{ fontFamily: "var(--font-serif, serif)", color: "var(--foreground)" }}
         >
-          Card results
+          Cards
         </h3>
-        {searched && (
-          <span className="label-upper text-[9px] text-[var(--text-muted)]">
-            for &ldquo;{searched}&rdquo;
+        {searched && !loading && (
+          <span className="label-upper text-[9px]" style={{ color: "var(--text-muted)" }}>
+            &ldquo;{searched}&rdquo; — {results.length} result{results.length !== 1 ? "s" : ""}
           </span>
         )}
         {loading && (
-          <span className="text-[10px] text-[var(--text-muted)] animate-pulse">Searching…</span>
+          <span className="label-upper text-[9px] animate-pulse" style={{ color: "var(--text-muted)" }}>
+            Searching…
+          </span>
         )}
       </div>
 
       {!loading && searched && results.length === 0 && (
-        <p className="text-sm text-[var(--text-muted)] py-4">No cards found.</p>
+        <p className="text-sm py-8" style={{ color: "var(--text-muted)" }}>No cards found.</p>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+      <div
+        className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8"
+        style={{ borderTop: "1px solid var(--border)", borderLeft: "1px solid var(--border)" }}
+      >
         {results.map((card) => (
           <Link
             key={card.productId}
             href={card.groupId ? `/tools/cards/${game}/${card.groupId}` : "#"}
-            className="group relative rounded-xl overflow-hidden flex flex-col"
+            className="group relative flex flex-col overflow-hidden cursor-pointer"
             style={{
-              background: "color-mix(in srgb, var(--foreground) 5%, var(--background))",
-              border: `1px solid ${gameAccentBorder}`,
-              transition: "box-shadow 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 20px ${gameAccentMuted}`;
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.boxShadow = "none";
+              borderRight: "1px solid var(--border)",
+              borderBottom: "1px solid var(--border)",
+              background: "var(--background)",
             }}
           >
-            {/* Accent strip */}
+            {/* Hover accent line */}
             <div
-              className="h-0.5 w-full shrink-0"
-              style={{ background: `linear-gradient(90deg, ${gameAccent}, transparent)` }}
+              className="absolute top-0 left-0 right-0 h-[2px] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"
+              style={{ background: gameAccent }}
             />
 
             {/* Card image */}
             {card.imageUrl ? (
-              <div className="relative w-full aspect-[2.5/3.5] bg-black/20">
+              <div className="relative w-full aspect-[2.5/3.5] overflow-hidden">
                 <Image
                   src={card.imageUrl}
                   alt={card.name}
                   fill
-                  className="object-contain p-1.5"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
                   unoptimized
                 />
               </div>
             ) : (
               <div
-                className="w-full aspect-[2.5/3.5] flex items-center justify-center text-3xl"
-                style={{ background: gameAccentMuted }}
+                className="w-full aspect-[2.5/3.5] flex items-center justify-center text-2xl"
+                style={{ background: "var(--muted)" }}
               >
                 🃏
               </div>
             )}
 
-            <div className="p-2.5 flex flex-col gap-1">
+            <div className="p-2 flex flex-col gap-0.5">
               <p
-                className="text-xs font-bold leading-snug text-[var(--foreground)] line-clamp-2"
-                style={{ fontFamily: "var(--font-serif, serif)" }}
+                className="text-[10px] font-bold leading-snug line-clamp-2"
+                style={{ fontFamily: "var(--font-serif, serif)", color: "var(--foreground)" }}
               >
                 {card.name}
               </p>
-              {card.rarity && (
-                <p className="label-upper text-[9px] text-[var(--text-muted)]">{card.rarity}</p>
+              {card.setName && (
+                <p className="label-upper text-[8px] truncate" style={{ color: "var(--text-muted)" }}>
+                  {card.setName}
+                </p>
               )}
               {card.marketPriceCents != null && card.marketPriceCents > 0 && (
-                <p
-                  className="label-upper text-[10px] font-bold"
-                  style={{ color: gameAccentText }}
-                >
+                <p className="label-upper text-[9px] font-black mt-0.5" style={{ color: gameAccent }}>
                   ${(card.marketPriceCents / 100).toFixed(2)}
                 </p>
               )}
@@ -502,154 +532,123 @@ export default function CardsIndexPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen" style={{ background: "var(--background)" }}>
 
       {/* ── Hero ── */}
-      <div
-        ref={heroRef}
-        className="relative overflow-hidden border-b border-[var(--border-strong)]"
-        style={{
-          background: "linear-gradient(135deg, var(--background) 0%, color-mix(in srgb, var(--foreground) 4%, var(--background)) 100%)",
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 py-14 md:py-20">
-          <p className="hero-animate label-upper text-[10px] text-[var(--text-muted)] mb-3">TCG Times — Card Database</p>
-          <h1
-            className="hero-animate text-4xl md:text-6xl font-black text-[var(--foreground)] leading-none tracking-tight mb-4"
-            style={{ fontFamily: "var(--font-serif, serif)" }}
-          >
-            Card Gallery
-          </h1>
-          <p className="hero-animate text-[var(--text-muted)] text-base max-w-xl leading-relaxed">
-            Browse every set across Pokémon, Flesh and Blood, Grand Archive, and One Piece TCG.
-            Live market prices, rarity breakdowns, and full card details.
-          </p>
-        </div>
-
-        {/* Decorative lines */}
-        <div className="absolute inset-0 pointer-events-none">
-          {[0.2, 0.45, 0.7, 0.88].map((x, i) => (
-            <div
-              key={i}
-              className="absolute top-0 bottom-0 w-px bg-[var(--border)]"
-              style={{ left: `${x * 100}%`, opacity: 0.3 }}
-            />
-          ))}
-        </div>
+      <div ref={heroRef} className="max-w-7xl mx-auto px-6 lg:px-12 pt-16 pb-10">
+        <p className="hero-animate label-upper text-[9px] mb-5" style={{ color: "var(--text-muted)" }}>
+          TCG Times — Card Database
+        </p>
+        <h1
+          className="hero-animate font-bold leading-[0.95] tracking-tight"
+          style={{
+            fontFamily: "var(--font-serif, serif)",
+            fontSize: "clamp(3rem, 8vw, 7rem)",
+            color: "var(--foreground)",
+          }}
+        >
+          Card<br />Gallery
+        </h1>
+        <p className="hero-animate mt-5 text-sm max-w-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
+          Browse every set across Pokémon, Flesh and Blood, Grand Archive, and One Piece. Live prices, full card details.
+        </p>
       </div>
 
-      {/* ── Game tabs ── */}
-      <div className="sticky top-0 z-30 bg-[var(--background)]/95 backdrop-blur-md border-b border-[var(--border-strong)]">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10">
-          <div className="flex items-center gap-0 divide-x divide-[var(--border)] overflow-x-auto">
+      {/* ── Game tabs + search ── sticky bar ── */}
+      <div
+        className="sticky top-0 z-30 backdrop-blur-md"
+        style={{
+          background: "color-mix(in srgb, var(--background) 92%, transparent)",
+          borderTop: "1px solid var(--border)",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-6 lg:px-12 flex items-center gap-0">
+          {/* Game tabs */}
+          <div className="flex items-center overflow-x-auto shrink-0" style={{ borderRight: "1px solid var(--border)" }}>
             {GAMES.map((g) => (
               <button
                 key={g.slug}
-                onClick={() => setActiveGame(g.slug)}
-                className={`flex-shrink-0 flex items-center gap-2 px-5 py-3.5 label-upper text-[11px] transition-colors ${
-                  activeGame === g.slug
-                    ? "bg-[var(--foreground)] text-[var(--background)]"
-                    : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
-                }`}
+                onClick={() => { setActiveGame(g.slug); setSearchQuery(""); }}
+                className="flex-shrink-0 flex items-center gap-1.5 px-4 py-3.5 label-upper text-[10px] transition-colors duration-150"
+                style={{
+                  background: activeGame === g.slug ? g.accent : "transparent",
+                  color: activeGame === g.slug ? "#fff" : "var(--text-muted)",
+                  borderRight: "1px solid var(--border)",
+                }}
               >
                 <span>{g.emoji}</span>
                 <span>{g.shortLabel}</span>
               </button>
             ))}
           </div>
-        </div>
-      </div>
 
-      {/* ── Main content ── */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-8">
-
-        {/* Game header */}
-        <div className="mb-5 flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-4">
-          <div>
-            <h2
-              className="text-2xl font-black text-[var(--foreground)] flex items-center gap-2"
-              style={{ fontFamily: "var(--font-serif, serif)" }}
-            >
-              <span>{activeGameMeta.emoji}</span>
-              <span>{activeGameMeta.label}</span>
-            </h2>
-            <p className="text-sm text-[var(--text-muted)] mt-0.5">{activeGameMeta.description}</p>
-          </div>
-          {!loading && sets.length > 0 && (
-            <span className="label-upper text-[10px] text-[var(--text-muted)] sm:ml-auto shrink-0">
-              {sets.length} sets
-            </span>
-          )}
-        </div>
-
-        {/* ── Search bar ── */}
-        <div className="mb-6">
-          <div
-            className="flex items-center gap-3 rounded-xl px-4 py-3"
-            style={{
-              background: "color-mix(in srgb, var(--foreground) 5%, var(--background))",
-              border: `1px solid ${searchQuery ? activeGameMeta.accentBorder : "color-mix(in srgb, var(--foreground) 12%, var(--background))"}`,
-              transition: "border-color 0.2s ease",
-              boxShadow: searchQuery ? `0 0 0 3px ${activeGameMeta.accentMuted}` : "none",
-            }}
-          >
-            {/* Search icon */}
-            <svg
-              width="15" height="15" viewBox="0 0 15 15" fill="none"
-              className="shrink-0 opacity-40"
-              style={{ color: searchQuery ? activeGameMeta.accentText : "var(--foreground)" }}
-            >
+          {/* Search */}
+          <div className="flex-1 flex items-center gap-2 px-4">
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="none" className="shrink-0 opacity-30">
               <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5" />
               <path d="M10 10l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-
             <input
               ref={searchRef}
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearchInput(e.target.value)}
-              placeholder={`Search sets or cards in ${activeGameMeta.label}…`}
-              className="flex-1 bg-transparent text-sm text-[var(--foreground)] placeholder:text-[var(--text-muted)] outline-none"
+              placeholder={`Search ${activeGameMeta.label} sets or cards…`}
+              className="flex-1 bg-transparent text-sm outline-none py-3.5"
+              style={{ color: "var(--foreground)" }}
             />
-
-            {/* Mode toggle */}
-            <div
-              className="flex items-center rounded-lg overflow-hidden shrink-0"
-              style={{ border: `1px solid color-mix(in srgb, var(--foreground) 12%, var(--background))` }}
-            >
+            {/* Mode pills */}
+            <div className="flex items-center gap-1 shrink-0">
               {(["set", "card"] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setSearchMode(mode)}
-                  className="px-2.5 py-1 label-upper text-[9px] transition-colors"
+                  className="px-2 py-0.5 label-upper text-[8px] rounded-full transition-colors"
                   style={{
-                    background: searchMode === mode ? activeGameMeta.accentMuted : "transparent",
-                    color: searchMode === mode ? activeGameMeta.accentText : "var(--text-muted)",
+                    background: searchMode === mode ? activeGameMeta.accent : "transparent",
+                    color: searchMode === mode ? "#fff" : "var(--text-muted)",
+                    border: `1px solid ${searchMode === mode ? activeGameMeta.accent : "var(--border)"}`,
                   }}
                 >
                   {mode}
                 </button>
               ))}
             </div>
-
-            {/* Clear */}
             {searchQuery && (
               <button
                 onClick={() => { setSearchQuery(""); searchRef.current?.focus(); }}
-                className="shrink-0 text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors text-sm leading-none"
+                className="shrink-0 text-sm leading-none transition-opacity hover:opacity-60"
+                style={{ color: "var(--text-muted)" }}
               >
                 ×
               </button>
             )}
           </div>
-        </div>
 
-        {/* Error */}
+          {/* Set count */}
+          {!loading && sets.length > 0 && (
+            <span className="label-upper text-[9px] px-4 shrink-0" style={{ color: "var(--text-muted)", borderLeft: "1px solid var(--border)", paddingTop: "1rem", paddingBottom: "1rem" }}>
+              {sets.length} sets
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Main content ── */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-12 py-8">
+
         {error && (
-          <div className="text-red-400 text-sm text-center py-10">{error}</div>
+          <p className="text-sm py-10 text-center" style={{ color: "#f87171" }}>{error}</p>
         )}
 
-        {/* Card search results (card mode with query) */}
+        {/* Set-name filter count */}
+        {searchMode === "set" && searchQuery.trim() && !loading && (
+          <p className="label-upper text-[9px] mb-4" style={{ color: "var(--text-muted)" }}>
+            {filteredSets.length} set{filteredSets.length !== 1 ? "s" : ""} matching &ldquo;{searchQuery}&rdquo;
+          </p>
+        )}
+
         {searchMode === "card" && searchQuery.trim() ? (
           <CardSearchResults
             query={searchQuery}
@@ -660,18 +659,7 @@ export default function CardsIndexPage() {
             gameAccentText={activeGameMeta.accentText}
           />
         ) : (
-          /* Sets grid (with optional set-name filter) */
-          <>
-            {searchMode === "set" && searchQuery.trim() && !loading && (
-              <p className="text-xs text-[var(--text-muted)] mb-4">
-                {filteredSets.length} set{filteredSets.length !== 1 ? "s" : ""} matching &ldquo;{searchQuery}&rdquo;
-              </p>
-            )}
-            {loading
-              ? <LoadingSkeleton />
-              : <SetGrid game={activeGameMeta} sets={filteredSets} />
-            }
-          </>
+          loading ? <LoadingSkeleton /> : <SetGrid game={activeGameMeta} sets={filteredSets} />
         )}
       </div>
     </div>

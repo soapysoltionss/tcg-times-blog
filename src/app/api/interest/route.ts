@@ -3,6 +3,43 @@ import { neon } from "@neondatabase/serverless";
 import { Resend } from "resend";
 
 // ---------------------------------------------------------------------------
+// In-memory rate limiter: max 3 requests per IP per 15 minutes
+// ---------------------------------------------------------------------------
+
+interface RateBucket {
+  count: number;
+  resetAt: number;
+}
+
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 min
+const RATE_LIMIT_MAX       = 3;
+const ipBuckets            = new Map<string, RateBucket>();
+
+function checkRateLimit(ip: string): { allowed: boolean; retryAfterSeconds: number } {
+  const now    = Date.now();
+  const bucket = ipBuckets.get(ip);
+
+  // Clean up expired buckets periodically to avoid memory growth
+  if (ipBuckets.size > 10_000) {
+    for (const [key, val] of ipBuckets) {
+      if (val.resetAt < now) ipBuckets.delete(key);
+    }
+  }
+
+  if (!bucket || bucket.resetAt < now) {
+    ipBuckets.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+
+  if (bucket.count >= RATE_LIMIT_MAX) {
+    return { allowed: false, retryAfterSeconds: Math.ceil((bucket.resetAt - now) / 1000) };
+  }
+
+  bucket.count++;
+  return { allowed: true, retryAfterSeconds: 0 };
+}
+
+// ---------------------------------------------------------------------------
 // POST /api/interest
 // Body: { email: string }
 //
@@ -11,7 +48,20 @@ import { Resend } from "resend";
 // ---------------------------------------------------------------------------
 
 export async function POST(req: NextRequest) {
-  const { email } = await req.json().catch(() => ({ email: "" }));
+  // ── Rate limit by IP ─────────────────────────────────────────────────────
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim()
+          ?? req.headers.get("x-real-ip")
+          ?? "unknown";
+  const rl = checkRateLimit(ip);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+    );
+  }
+
+  const body = await req.json().catch(() => ({}));
+  const { email } = body as { email?: unknown };
 
   if (!email || typeof email !== "string") {
     return NextResponse.json({ error: "Email is required." }, { status: 400 });
@@ -19,6 +69,11 @@ export async function POST(req: NextRequest) {
 
   const normalised = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalised)) {
+    return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
+  }
+
+  // Prevent absurdly long inputs
+  if (normalised.length > 254) {
     return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
   }
 

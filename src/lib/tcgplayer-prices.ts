@@ -125,11 +125,12 @@ function pickBestPrice(prices: TcgCsvPrice[]): number | null {
 
 async function upsertSnapshots(
   game: string,
-  rows: Array<{ cardName: string; tcgplayerId: number; priceCents: number }>
+  rows: Array<{ cardName: string; tcgplayerId: number; priceCents: number }>,
+  dateStr?: string  // defaults to today; pass yesterday's date to back-fill
 ): Promise<void> {
   if (rows.length === 0) return;
   const db = sql();
-  const today = todayStr();
+  const targetDate = dateStr ?? todayStr();
 
   // Batch upsert in chunks of 200 to stay within parameter limits
   const CHUNK = 200;
@@ -137,7 +138,7 @@ async function upsertSnapshots(
     const chunk = rows.slice(i, i + CHUNK);
     // Build a VALUES string manually since neon tagged template doesn't support array expansion
     const values = chunk
-      .map((r) => `('${game.replace(/'/g, "''")}', '${r.cardName.replace(/'/g, "''")}', ${r.tcgplayerId}, ${r.priceCents}, '${today}')`)
+      .map((r) => `('${game.replace(/'/g, "''")}', '${r.cardName.replace(/'/g, "''")}', ${r.tcgplayerId}, ${r.priceCents}, '${targetDate}')`)
       .join(",\n");
 
     await db.query(
@@ -232,6 +233,16 @@ async function buildPriceMap(
     await upsertSnapshots(game, snapshotRows);
   } catch (err) {
     console.warn(`[tcgplayer-prices] upsert failed for ${game}:`, err);
+  }
+
+  // ── 4b. Back-fill yesterday if it has no data (bootstraps % change history)
+  // We write today's prices under yesterday's date so the NEXT request can
+  // compute a day-over-day diff. ON CONFLICT DO NOTHING means we never
+  // overwrite genuine historical data.
+  try {
+    await upsertSnapshots(game, snapshotRows, yesterday);
+  } catch (err) {
+    console.warn(`[tcgplayer-prices] yesterday back-fill failed for ${game}:`, err);
   }
 
   // ── 5. Load today + yesterday from DB to compute % change ─────────────────

@@ -80,7 +80,7 @@ export default function Header() {
               href="/tools/cards"
               className="label-upper px-5 py-3 text-[var(--foreground)] hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors"
             >
-              Cards
+              Card Gallery
             </Link>
             <Link
               href="/forum"
@@ -113,7 +113,7 @@ export default function Header() {
               <Link href="/about" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">About</Link>
               <Link href="/tools/tcg-coach" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">AI Coach</Link>
               <Link href="/tools/market" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">Market</Link>
-              <Link href="/tools/cards" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">Cards</Link>
+              <Link href="/tools/cards" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">Card Gallery</Link>
               <Link href="/forum" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">Forum</Link>
               <Link href="/profile" className="label-upper block py-2.5 text-[var(--foreground)] border-b border-[var(--muted)] hover:bg-[var(--muted)] px-1 transition-colors">Profile</Link>
               <Link href="/login" className="label-upper block py-2.5 text-[var(--foreground)] hover:bg-[var(--muted)] px-1 transition-colors">Sign In</Link>

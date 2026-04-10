@@ -226,31 +226,67 @@ async function searchPokemonCards(q: string): Promise<CardSearchResult[]> {
 }
 
 async function searchTcgCsvCards(categoryId: number, q: string): Promise<CardSearchResult[]> {
-  // tcgcsv doesn't have a text search API — fetch all groups then search products
-  // For performance, we do a name-based filter on the fly using a recent-groups sample
-  const res = await fetch(`${TCGCSV}/${categoryId}/products?nameStartsWith=${encodeURIComponent(q)}&limit=18`, {
+  // tcgcsv has no cross-group search — fetch groups list, then search products
+  // from the most recent 20 groups in parallel and filter by name.
+  const groupsRes = await fetch(`${TCGCSV}/${categoryId}/groups`, {
     signal: AbortSignal.timeout(10_000),
     cache: "no-store",
   });
-  if (!res.ok) return [];
-  const data = await res.json() as { results?: Array<{
-    productId: number; name: string; imageUrl?: string;
-    groupId?: number;
-    extendedData?: Array<{ name: string; value: string }>;
-  }> };
+  if (!groupsRes.ok) return [];
 
-  const results = data.results ?? [];
-  return results.slice(0, 18).map(p => {
-    const ext: Record<string,string> = {};
-    for (const e of p.extendedData ?? []) ext[e.name] = e.value;
-    return {
-      productId: p.productId,
-      name:      p.name,
-      imageUrl:  p.imageUrl ?? `https://tcgplayer-cdn.tcgplayer.com/product/${p.productId}_200w.jpg`,
-      rarity:    ext["Rarity"] ?? undefined,
-      groupId:   p.groupId,
-    };
+  const groupsData = await groupsRes.json() as { results: Array<{ groupId: number; name: string }> };
+  const groups = (groupsData.results ?? []).slice(0, 20); // most recent 20
+
+  const lower = q.toLowerCase();
+
+  // Fetch products from all groups in parallel
+  const fetches = groups.map(async (g) => {
+    try {
+      const res = await fetch(`${TCGCSV}/${categoryId}/${g.groupId}/products`, {
+        signal: AbortSignal.timeout(8_000),
+        cache: "no-store",
+      });
+      if (!res.ok) return [];
+      const data = await res.json() as { results?: Array<{
+        productId: number;
+        name: string;
+        imageUrl?: string;
+        extendedData?: Array<{ name: string; value: string }>;
+      }> };
+      return (data.results ?? [])
+        .filter(p => p.name.toLowerCase().includes(lower))
+        .map(p => {
+          const ext: Record<string, string> = {};
+          for (const e of p.extendedData ?? []) ext[e.name] = e.value;
+          // Only actual cards (have HP or Number)
+          if (!ext["HP"] && !ext["Number"] && !ext["Pitch"]) return null;
+          return {
+            productId: p.productId as number | string,
+            name:      p.name,
+            imageUrl:  `https://tcgplayer-cdn.tcgplayer.com/product/${p.productId}_200w.jpg`,
+            rarity:    ext["Rarity"] ?? undefined,
+            setName:   g.name,
+            groupId:   g.groupId,
+          } as CardSearchResult;
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null);
+    } catch {
+      return [];
+    }
   });
+
+  const nested = await Promise.all(fetches);
+  const all = nested.flat();
+
+  // Deduplicate by name (keep first/highest groupId hit), limit to 18
+  const seen = new Set<string>();
+  const unique: CardSearchResult[] = [];
+  for (const c of all) {
+    const key = c.name.toLowerCase();
+    if (!seen.has(key)) { seen.add(key); unique.push(c); }
+    if (unique.length >= 18) break;
+  }
+  return unique;
 }
 
 // ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { MODEL_OPTIONS, TIER_META, type ModelChoice } from "@/lib/ai-coach";
+import { TIER_META } from "@/lib/ai-coach";
 import { BanListWidget } from "@/components/BanListWidget";
 
 type Message = { role: "user" | "assistant"; content: string };
@@ -42,8 +42,6 @@ export default function TcgCoachPage() {
   const [rateLimited, setRateLimited] = useState(false);
   const [lastIntent, setLastIntent] = useState<Intent | null>(null);
   const [lastProvider, setLastProvider] = useState<string | null>(null);
-  const [modelChoice, setModelChoice] = useState<ModelChoice>("claude");
-  const [showModelPicker, setShowModelPicker] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Fetch tier from session
@@ -74,7 +72,7 @@ export default function TcgCoachPage() {
       const res = await fetch("/api/tcg-coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next, modelChoice }),
+        body: JSON.stringify({ messages: next }),
       });
 
       if (res.status === 429) {
@@ -122,14 +120,13 @@ export default function TcgCoachPage() {
   }
 
   const tierMeta = TIER_LABELS[tier] ?? TIER_LABELS[0];
-  const activeModel = MODEL_OPTIONS.find((m) => m.id === modelChoice) ?? MODEL_OPTIONS[0];
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-1 flex-wrap">
-          <span className="text-3xl">{activeModel.badge}</span>
+          <span className="text-3xl">🤖</span>
           <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">
             TCG AI Coach
           </h1>
@@ -164,62 +161,19 @@ export default function TcgCoachPage() {
         </div>
       </div>
 
-      {/* Model picker */}
-      <div className="mb-5 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-        <button
-          onClick={() => setShowModelPicker((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        >
-          <span className="flex items-center gap-2 font-medium">
-            <span>{activeModel.badge}</span>
-            <span>{activeModel.label}</span>
-            <span className="text-xs font-normal text-gray-400 dark:text-gray-500 hidden sm:inline">
-              — {activeModel.tagline}
-            </span>
+      {/* Model info strip — static, no picker */}
+      <div className="mb-5 flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+        <span className="text-lg">🤖</span>
+        <div className="flex-1 min-w-0">
+          <span className="font-semibold text-sm text-gray-900 dark:text-white">Qwen 3.6 Plus</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500 ml-2 hidden sm:inline">
+            — Rules, strategy, deckbuilding & prices
           </span>
-          <span className="text-xs text-gray-400">{showModelPicker ? "▲ Hide" : "▼ Switch model"}</span>
-        </button>
-
-        {showModelPicker && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200 dark:divide-gray-700 border-t border-gray-200 dark:border-gray-700">
-            {MODEL_OPTIONS.map((m) => {
-              const locked = tier < m.tierRequired;
-              const active = modelChoice === m.id;
-              return (
-                <button
-                  key={m.id}
-                  disabled={locked}
-                  onClick={() => { setModelChoice(m.id); setShowModelPicker(false); }}
-                  className={`flex flex-col gap-2 p-4 text-left transition-colors ${
-                    active
-                      ? "bg-violet-50 dark:bg-violet-950/40"
-                      : locked
-                      ? "opacity-40 cursor-not-allowed bg-white dark:bg-gray-900"
-                      : "bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{m.badge}</span>
-                    <span className="font-semibold text-sm text-gray-900 dark:text-white">{m.label}</span>
-                    {active && <span className="text-[10px] text-violet-600 dark:text-violet-400 font-bold ml-auto">ACTIVE</span>}
-                    {locked && <span className="text-[10px] text-gray-400 font-semibold ml-auto">BASIC+</span>}
-                  </div>
-                  <p className="text-xs text-violet-600 dark:text-violet-400 font-medium">{m.tagline}</p>
-                  <ul className="space-y-0.5">
-                    {m.strengths.map((s) => (
-                      <li key={s} className="text-[11px] text-gray-500 dark:text-gray-400 flex gap-1">
-                        <span className="text-gray-300 dark:text-gray-600 shrink-0">—</span>
-                        {s}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium uppercase tracking-wide">
-                    Best for: {m.bestFor}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
+        </div>
+        {lastProvider && (
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">
+            via {lastProvider}
+          </span>
         )}
       </div>
 
@@ -388,11 +342,7 @@ export default function TcgCoachPage() {
       {/* Tier info + clear */}
       <div className="mt-3 flex items-center justify-between">
         <div className="text-xs text-gray-400 dark:text-gray-500 space-x-3">
-          <span>{activeModel.badge} Powered by {lastProvider ?? activeModel.provider}</span>
-          {tier === 0 && <span>· Free tier uses {activeModel.id === "claude" ? "Haiku" : activeModel.label}</span>}
-          {tier === 1 && <span>· Starter uses {activeModel.id === "claude" ? "Haiku" : activeModel.label}</span>}
-          {tier === 2 && <span>· Basic uses {activeModel.id === "claude" ? "Haiku" : activeModel.label}</span>}
-          {tier === 3 && <span>· Pro uses {activeModel.id === "claude" ? "Sonnet" : activeModel.label + " Pro"}</span>}
+          <span>🤖 Powered by Qwen 3.6 Plus via OpenRouter</span>
         </div>
         {messages.length > 0 && !rateLimited && (
           <button

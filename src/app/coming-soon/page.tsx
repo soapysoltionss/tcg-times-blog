@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+const LS_KEY = "tcgt_interest_submitted";
 
 export default function ComingSoonPage() {
   const [password, setPassword] = useState("");
@@ -10,6 +12,13 @@ export default function ComingSoonPage() {
   const [interestEmail, setInterestEmail] = useState("");
   const [interestState, setInterestState] = useState<"idle" | "loading" | "done" | "already" | "error">("idle");
   const [interestError, setInterestError] = useState("");
+
+  // Restore persisted "already submitted" state on mount
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(LS_KEY)) setInterestState("done");
+    } catch { /* localStorage may be blocked */ }
+  }, []);
 
   async function handleUnlock(e: React.FormEvent) {
     e.preventDefault();
@@ -33,22 +42,36 @@ export default function ComingSoonPage() {
 
   async function handleInterest(e: React.FormEvent) {
     e.preventDefault();
+    // Prevent double-submit
+    if (interestState === "loading" || interestState === "done" || interestState === "already") return;
     if (!interestEmail.trim()) return;
+
     setInterestState("loading");
     setInterestError("");
 
-    const res = await fetch("/api/interest", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: interestEmail.trim() }),
-    });
+    try {
+      const res = await fetch("/api/interest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: interestEmail.trim() }),
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      setInterestState(data.alreadyRegistered ? "already" : "done");
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setInterestError(data.error ?? "Something went wrong. Please try again.");
+      if (res.ok) {
+        const data = await res.json();
+        const nextState = data.alreadyRegistered ? "already" : "done";
+        setInterestState(nextState);
+        // Persist so re-opening the page keeps the button locked
+        try { localStorage.setItem(LS_KEY, "1"); } catch { /* blocked */ }
+      } else if (res.status === 429) {
+        setInterestError("Too many requests — please wait a moment and try again.");
+        setInterestState("error");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setInterestError((data as { error?: string }).error ?? "Something went wrong. Please try again.");
+        setInterestState("error");
+      }
+    } catch {
+      setInterestError("Network error — please check your connection.");
       setInterestState("error");
     }
   }

@@ -32,7 +32,8 @@ export type AgentIntent =
 // Model choices
 // ---------------------------------------------------------------------------
 
-export type ModelChoice = "claude" | "gpt" | "gemini";
+/** Only Qwen is used — free via OpenRouter (qwen/qwen3-235b-a22b:free) */
+export type ModelChoice = "qwen";
 
 // ---------------------------------------------------------------------------
 // Message format (matches both Anthropic and OpenAI conventions)

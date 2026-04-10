@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       counterpartyRegion?: string;
       modelChoice?: ModelChoice;
     };
-    const { messages, counterpartyRegion: rawCounterparty, modelChoice = "claude" } = body;
+    const { messages, counterpartyRegion: rawCounterparty, modelChoice = "qwen" } = body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });

@@ -6,14 +6,13 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { CoachMessage } from "./types";
 
 // Keep only the last N messages to control token spend
 const HISTORY_WINDOW = 8;
 
 // ---------------------------------------------------------------------------
-// Claude (Anthropic)
+// Claude (Anthropic) — used for the cheap router/guard steps only
 // ---------------------------------------------------------------------------
 
 export async function callClaude(
@@ -32,21 +31,30 @@ export async function callClaude(
 }
 
 // ---------------------------------------------------------------------------
-// GPT (OpenAI)
+// Qwen via OpenRouter (free, OpenAI-compatible)
+// Model: qwen/qwen3.6-plus:free
 // ---------------------------------------------------------------------------
 
-export async function callGPT(
+export async function callQwen(
   model: string,
   system: string,
   messages: CoachMessage[]
 ): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
 
-  const client = new OpenAI({ apiKey });
+  const client = new OpenAI({
+    apiKey,
+    baseURL: "https://openrouter.ai/api/v1",
+    defaultHeaders: {
+      "HTTP-Referer": "https://www.tcgtimes.blog",
+      "X-Title": "TCG Times AI Coach",
+    },
+  });
+
   const res = await client.chat.completions.create({
     model,
-    max_tokens: 500,
+    max_tokens: 800,
     messages: [
       { role: "system", content: system },
       ...messages.slice(-HISTORY_WINDOW).map((m) => ({
@@ -56,34 +64,4 @@ export async function callGPT(
     ],
   });
   return res.choices[0]?.message?.content ?? "";
-}
-
-// ---------------------------------------------------------------------------
-// Gemini (Google)
-// ---------------------------------------------------------------------------
-
-export async function callGemini(
-  model: string,
-  system: string,
-  messages: CoachMessage[]
-): Promise<string> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
-  if (!apiKey) throw new Error("GOOGLE_AI_API_KEY is not set");
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const geminiModel = genAI.getGenerativeModel({
-    model,
-    systemInstruction: system,
-  });
-
-  const trimmed = messages.slice(-HISTORY_WINDOW);
-  const last = trimmed[trimmed.length - 1];
-  const history = trimmed.slice(0, -1).map((m) => ({
-    role: m.role === "user" ? "user" : "model",
-    parts: [{ text: m.content }],
-  }));
-
-  const chat = geminiModel.startChat({ history });
-  const res = await chat.sendMessage(last?.content ?? "");
-  return res.response.text();
 }
