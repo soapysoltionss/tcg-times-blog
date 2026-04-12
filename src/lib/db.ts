@@ -153,6 +153,10 @@ export async function getDbPostsByCategory(category: string): Promise<DbPostMeta
   return (await backend()).getDbPostsByCategory(category);
 }
 
+export async function getPostsByCardTag(cardName: string): Promise<DbPostMeta[]> {
+  return (await backend()).getPostsByCardTag(cardName);
+}
+
 export async function getPinnedDbPosts(category?: string): Promise<DbPostMeta[]> {
   return (await backend()).getPinnedDbPosts(category);
 }

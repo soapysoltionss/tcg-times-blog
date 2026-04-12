@@ -27,6 +27,8 @@ export type PostFrontmatter = {
   pinned?: boolean;
   paywalled?: boolean;
   coverImage?: string;
+  /** Card names tagged in this article — used by the price tracker to surface "Mentioned in" links */
+  cardTags?: string[];
 };
 
 export type PostComment = {

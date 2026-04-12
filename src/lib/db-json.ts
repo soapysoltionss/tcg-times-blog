@@ -378,6 +378,14 @@ export async function getDbPostsByCategory(category: string): Promise<DbPostMeta
   return all.filter((p) => p.category === category);
 }
 
+export async function getPostsByCardTag(cardName: string): Promise<DbPostMeta[]> {
+  const all = await getAllDbPosts();
+  const lower = cardName.toLowerCase();
+  return all.filter((p) =>
+    Array.isArray(p.cardTags) && p.cardTags.some((t) => t.toLowerCase() === lower)
+  );
+}
+
 export async function getPinnedDbPosts(category?: string): Promise<DbPostMeta[]> {
   const all = await getAllDbPosts();
   return all.filter((p) => p.pinned && (!category || p.category === category));

@@ -5,7 +5,12 @@
 
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+/** Lazy-init so the module can be imported during build without a live API key. */
+function getResend() {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error("RESEND_API_KEY is not set");
+  return new Resend(key);
+}
 
 const FROM = "TCG Times <noreply@tcgtimes.blog>";
 
@@ -17,7 +22,7 @@ export async function sendVerificationEmail(opts: {
 }) {
   const { to, firstName, code } = opts;
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: "Verify your TCG Times account",
@@ -33,7 +38,7 @@ export async function sendPasswordResetEmail(opts: {
 }) {
   const { to, firstName, code } = opts;
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: "Reset your TCG Times password",

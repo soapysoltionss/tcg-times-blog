@@ -616,6 +616,36 @@ export async function getDbPostsByCategory(category: string): Promise<DbPostMeta
   });
 }
 
+export async function getPostsByCardTag(cardName: string): Promise<DbPostMeta[]> {
+  const db = sql();
+  const rows = await db`
+    SELECT slug, frontmatter
+    FROM posts
+    WHERE EXISTS (
+      SELECT 1 FROM jsonb_array_elements_text(frontmatter->'cardTags') AS tag
+      WHERE lower(tag) = lower(${cardName})
+    )
+    ORDER BY frontmatter->>'date' DESC
+  `;
+  return rows.map((r) => {
+    const fm = r.frontmatter as Record<string, unknown>;
+    return {
+      slug: r.slug as string,
+      title: (fm.title as string) ?? "",
+      date: (fm.date as string) ?? "",
+      category: (fm.category as string) ?? "",
+      excerpt: (fm.excerpt as string) ?? "",
+      coverImage: (fm.coverImage as string) ?? undefined,
+      featured: fm.featured === true || fm.featured === "true",
+      pinned: fm.pinned === true || fm.pinned === "true",
+      paywalled: fm.paywalled === true || fm.paywalled === "true",
+      tags: Array.isArray(fm.tags) ? (fm.tags as string[]) : [],
+      cardTags: Array.isArray(fm.cardTags) ? (fm.cardTags as string[]) : [],
+      readingTime: "",
+    } as DbPostMeta;
+  });
+}
+
 export async function getPinnedDbPosts(category?: string): Promise<DbPostMeta[]> {
   const db = sql();
   const rows = category

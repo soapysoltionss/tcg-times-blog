@@ -15,6 +15,7 @@ import {
   getFeaturedDbPosts,
   getPinnedDbPosts,
   getHeroFeaturedPost,
+  getPostsByCardTag,
   upsertPost,
   deletePost,
 } from "@/lib/db";
@@ -93,4 +94,4 @@ export async function getHeroPost() {
 // Write helpers
 // ---------------------------------------------------------------------------
 
-export { upsertPost, deletePost };
+export { upsertPost, deletePost, getPostsByCardTag };
