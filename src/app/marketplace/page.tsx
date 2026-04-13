@@ -125,7 +125,7 @@ function SetNameCombobox({
 // ---------------------------------------------------------------------------
 
 const GAMES = [
-  { value: "", label: "All" },
+  { value: "", label: "All Games" },
   { value: "flesh-and-blood", label: "Flesh and Blood" },
   { value: "grand-archive", label: "Grand Archive" },
   { value: "one-piece", label: "One Piece" },
@@ -164,14 +164,95 @@ function conditionBadge(c: ListingCondition) {
   return map[c] ?? "";
 }
 
+const CONDITION_ABBREV: Record<ListingCondition, string> = {
+  "Near Mint": "NM",
+  "Lightly Played": "LP",
+  "Moderately Played": "MP",
+  "Heavily Played": "HP",
+  "Damaged": "DMG",
+};
+
+type SortOption = "newest" | "price-asc" | "price-desc";
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "newest", label: "Newest" },
+  { value: "price-asc", label: "Price: Low → High" },
+  { value: "price-desc", label: "Price: High → Low" },
+];
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
+}
+
 // ---------------------------------------------------------------------------
 // Listing card
 // ---------------------------------------------------------------------------
 
-function ListingCard({ listing }: { listing: Listing }) {
+function ListingCard({ listing, view = "grid" }: { listing: Listing; view?: "grid" | "list" }) {
   const reprintRisk = listing.listingType !== "sealed"
     ? getReprintRisk(listing.cardName)
     : null;
+
+  if (view === "list") {
+    return (
+      <Link
+        href={`/marketplace/${listing.id}`}
+        className="group flex items-center gap-4 border border-[var(--border)] hover:border-[var(--border-strong)] transition-colors bg-[var(--background)] px-4 py-3"
+      >
+        {/* Thumbnail */}
+        <div className="w-10 h-14 shrink-0 bg-[var(--muted)] overflow-hidden relative">
+          {listing.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={listing.imageUrl} alt={listing.cardName} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-[8px] text-[var(--text-muted)]">—</span>
+            </div>
+          )}
+        </div>
+        {/* Card name + set */}
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-[var(--foreground)] text-sm leading-tight truncate">{listing.cardName}</p>
+          <p className="label-upper text-[10px] text-[var(--text-muted)] truncate">{listing.setName}</p>
+        </div>
+        {/* Condition */}
+        <span className={`label-upper text-[10px] px-1.5 py-0.5 rounded-sm shrink-0 ${conditionBadge(listing.condition)}`}>
+          {CONDITION_ABBREV[listing.condition] ?? listing.condition}
+        </span>
+        {/* Qty */}
+        <span className="label-upper text-[10px] text-[var(--text-muted)] shrink-0 w-8 text-right">×{listing.quantity}</span>
+        {/* Local pickup */}
+        {listing.localPickup && (
+          <span className="label-upper text-[10px] text-[var(--text-muted)] shrink-0">📍</span>
+        )}
+        {/* Seller */}
+        <div className="hidden sm:flex items-center gap-1 shrink-0 w-28 justify-end">
+          {listing.sellerIsTrusted && (
+            <span className="label-upper text-[9px] text-emerald-700 dark:text-emerald-400">✓</span>
+          )}
+          {listing.sellerIsVerified && (
+            <span className="label-upper text-[9px] text-blue-700 dark:text-blue-400">✦</span>
+          )}
+          <span className="label-upper text-[10px] text-[var(--text-muted)] truncate">@{listing.sellerUsername}</span>
+        </div>
+        {/* Time */}
+        <span className="hidden md:block label-upper text-[10px] text-[var(--text-muted)] shrink-0 w-16 text-right">{timeAgo(listing.createdAt)}</span>
+        {/* Price */}
+        <span className="text-base font-black text-[var(--foreground)] shrink-0 w-20 text-right" style={{ fontFamily: "var(--font-serif, serif)" }}>
+          {formatPrice(listing.priceCents)}
+        </span>
+      </Link>
+    );
+  }
 
   return (
     <Link
@@ -233,9 +314,12 @@ function ListingCard({ listing }: { listing: Listing }) {
         )}
 
         <div className="mt-auto pt-3 flex items-end justify-between gap-2">
-          <span className="text-xl font-black text-[var(--foreground)]" style={{ fontFamily: "var(--font-serif, serif)" }}>
-            {formatPrice(listing.priceCents)}
-          </span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xl font-black text-[var(--foreground)]" style={{ fontFamily: "var(--font-serif, serif)" }}>
+              {formatPrice(listing.priceCents)}
+            </span>
+            <span className="label-upper text-[9px] text-[var(--text-muted)] opacity-60">{timeAgo(listing.createdAt)}</span>
+          </div>
           <div className="flex flex-col items-end gap-0.5">
             <div className="flex items-center gap-1">
               {listing.sellerIsTrusted && (
@@ -436,17 +520,20 @@ interface FilterPanelProps {
   setStoreSource: (v: StoreSource) => void;
   productType: ProductTypeFilter;
   setProductType: (v: ProductTypeFilter) => void;
-  game: string;
-  setGame: (v: string) => void;
   showSoldOut: boolean;
   setShowSoldOut: (v: boolean) => void;
   localOnly: boolean;
   setLocalOnly: (v: boolean) => void;
+  minPrice: string;
+  setMinPrice: (v: string) => void;
+  maxPrice: string;
+  setMaxPrice: (v: string) => void;
 }
 
 function FilterPanel({
   tab, storeSource, setStoreSource, productType, setProductType,
-  game, setGame, showSoldOut, setShowSoldOut, localOnly, setLocalOnly,
+  showSoldOut, setShowSoldOut, localOnly, setLocalOnly,
+  minPrice, setMinPrice, maxPrice, setMaxPrice,
 }: FilterPanelProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -464,9 +551,10 @@ function FilterPanel({
   const activeCount = [
     tab === "store" && storeSource !== "all",
     productType !== "",
-    game !== "",
     showSoldOut,
     localOnly,
+    minPrice !== "",
+    maxPrice !== "",
   ].filter(Boolean).length;
 
   return (
@@ -537,23 +625,29 @@ function FilterPanel({
             </div>
           </div>
 
-          {/* Game */}
+          {/* Price range */}
           <div>
-            <p className="label-upper text-[10px] text-[var(--text-muted)] mb-2">Game</p>
-            <div className="flex flex-wrap gap-1.5">
-              {GAMES.map((g) => (
-                <button
-                  key={g.value}
-                  onClick={() => setGame(g.value)}
-                  className={`label-upper px-3 py-1.5 text-[10px] border transition-colors ${
-                    game === g.value
-                      ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
-                      : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
-                  }`}
-                >
-                  {g.label}
-                </button>
-              ))}
+            <p className="label-upper text-[10px] text-[var(--text-muted)] mb-2">Price Range (USD)</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Min"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                className="flex-1 border border-[var(--border)] bg-[var(--background)] px-2 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--border-strong)] outline-none"
+              />
+              <span className="label-upper text-[10px] text-[var(--text-muted)]">–</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Max"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                className="flex-1 border border-[var(--border)] bg-[var(--background)] px-2 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--border-strong)] outline-none"
+              />
             </div>
           </div>
 
@@ -602,9 +696,10 @@ function FilterPanel({
               onClick={() => {
                 setStoreSource("all");
                 setProductType("");
-                setGame("");
                 setShowSoldOut(false);
                 setLocalOnly(false);
+                setMinPrice("");
+                setMaxPrice("");
               }}
               className="label-upper text-[10px] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors underline underline-offset-2 text-left"
             >
@@ -917,6 +1012,8 @@ export default function MarketplacePage() {
   const [jeuxProducts, setJeuxProducts] = useState<JeuxProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [game, setGame] = useState("");
+  const [conditionFilter, setConditionFilter] = useState<ListingCondition | "">("");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [card, setCard] = useState("");
   const [search, setSearch] = useState(""); // committed search term
   const [showSell, setShowSell] = useState(false);
@@ -924,6 +1021,9 @@ export default function MarketplacePage() {
   // Hide sold-out products by default; revealed via filter toggle or when searching
   const [showSoldOut, setShowSoldOut] = useState(false);
   const [localOnly, setLocalOnly] = useState(false);
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Check login state
   useEffect(() => {
@@ -976,8 +1076,23 @@ export default function MarketplacePage() {
 
   const showJeux = tab === "store" && (storeSource === "all" || storeSource === "jeux");
   const showTcgTimes = storeSource !== "jeux" || tab === "community";
-  const filteredListings = localOnly ? listings.filter((l) => l.localPickup) : listings;
+
+  // Client-side filtering & sorting
+  const filteredListings = (() => {
+    let ls = localOnly ? listings.filter((l) => l.localPickup) : [...listings];
+    if (conditionFilter) ls = ls.filter((l) => l.condition === conditionFilter);
+    const minCents = minPrice ? Math.round(parseFloat(minPrice) * 100) : null;
+    const maxCents = maxPrice ? Math.round(parseFloat(maxPrice) * 100) : null;
+    if (minCents !== null && !isNaN(minCents)) ls = ls.filter((l) => l.priceCents >= minCents);
+    if (maxCents !== null && !isNaN(maxCents)) ls = ls.filter((l) => l.priceCents <= maxCents);
+    if (sortBy === "price-asc") ls.sort((a, b) => a.priceCents - b.priceCents);
+    else if (sortBy === "price-desc") ls.sort((a, b) => b.priceCents - a.priceCents);
+    else ls.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return ls;
+  })();
+
   const hasAnyResults = (showTcgTimes && filteredListings.length > 0) || (showJeux && jeuxProducts.length > 0);
+  const totalCount = (showTcgTimes ? filteredListings.length : 0) + (showJeux ? jeuxProducts.length : 0);
 
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-10 py-10">
@@ -1006,7 +1121,7 @@ export default function MarketplacePage() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Store / Community tabs */}
       <div className="flex border-b border-[var(--border)] mb-6">
         {(["store", "community"] as const).map((t) => (
           <button
@@ -1023,21 +1138,105 @@ export default function MarketplacePage() {
         ))}
       </div>
 
-      {/* Filter bar */}
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
+      {/* ── Game toggle (Untapped.gg style) ── */}
+      <div className="flex items-center gap-1.5 flex-wrap mb-5 overflow-x-auto pb-1">
+        {GAMES.map((g) => (
+          <button
+            key={g.value}
+            onClick={() => setGame(g.value)}
+            className={`label-upper px-3.5 py-2 text-[11px] border transition-colors whitespace-nowrap ${
+              game === g.value
+                ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
+                : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
+            }`}
+          >
+            {g.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Condition filter pills ── */}
+      <div className="flex items-center gap-1.5 flex-wrap mb-5">
+        <span className="label-upper text-[10px] text-[var(--text-muted)] mr-1">Condition:</span>
+        <button
+          onClick={() => setConditionFilter("")}
+          className={`label-upper px-3 py-1.5 text-[10px] border transition-colors ${
+            conditionFilter === ""
+              ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
+              : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
+          }`}
+        >
+          Any
+        </button>
+        {CONDITIONS.map((c) => (
+          <button
+            key={c}
+            onClick={() => setConditionFilter(conditionFilter === c ? "" : c)}
+            className={`label-upper px-3 py-1.5 text-[10px] border transition-colors ${
+              conditionFilter === c
+                ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]"
+                : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border-strong)]"
+            }`}
+          >
+            {CONDITION_ABBREV[c]}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Filter bar ── */}
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
         <FilterPanel
           tab={tab}
           storeSource={storeSource}
           setStoreSource={setStoreSource}
           productType={productType}
           setProductType={setProductType}
-          game={game}
-          setGame={setGame}
           showSoldOut={showSoldOut}
           setShowSoldOut={setShowSoldOut}
           localOnly={localOnly}
           setLocalOnly={setLocalOnly}
+          minPrice={minPrice}
+          setMinPrice={setMinPrice}
+          maxPrice={maxPrice}
+          setMaxPrice={setMaxPrice}
         />
+
+        {/* Sort */}
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortOption)}
+          className="label-upper text-[11px] border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] px-3 py-2.5 focus:border-[var(--border-strong)] outline-none cursor-pointer hover:border-[var(--border-strong)] transition-colors"
+        >
+          {SORT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+
+        {/* Grid / List view toggle */}
+        <div className="flex border border-[var(--border)] overflow-hidden">
+          <button
+            onClick={() => setViewMode("grid")}
+            title="Grid view"
+            className={`px-3 py-2.5 transition-colors ${viewMode === "grid" ? "bg-[var(--foreground)] text-[var(--background)]" : "bg-[var(--background)] text-[var(--text-muted)] hover:text-[var(--foreground)]"}`}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="1" y="1" width="6" height="6" rx="1" /><rect x="9" y="1" width="6" height="6" rx="1" />
+              <rect x="1" y="9" width="6" height="6" rx="1" /><rect x="9" y="9" width="6" height="6" rx="1" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setViewMode("list")}
+            title="List view"
+            className={`px-3 py-2.5 border-l border-[var(--border)] transition-colors ${viewMode === "list" ? "bg-[var(--foreground)] text-[var(--background)]" : "bg-[var(--background)] text-[var(--text-muted)] hover:text-[var(--foreground)]"}`}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <line x1="4" y1="4" x2="14" y2="4" /><circle cx="1.5" cy="4" r="1" fill="currentColor" stroke="none" />
+              <line x1="4" y1="8" x2="14" y2="8" /><circle cx="1.5" cy="8" r="1" fill="currentColor" stroke="none" />
+              <line x1="4" y1="12" x2="14" y2="12" /><circle cx="1.5" cy="12" r="1" fill="currentColor" stroke="none" />
+            </svg>
+          </button>
+        </div>
+
         {/* Active filter chips */}
         {storeSource !== "all" && tab === "store" && (
           <span className="flex items-center gap-1 label-upper text-[10px] px-2.5 py-1.5 bg-[var(--muted)] border border-[var(--border)] text-[var(--foreground)]">
@@ -1051,10 +1250,10 @@ export default function MarketplacePage() {
             <button onClick={() => setProductType("")} className="ml-0.5 opacity-50 hover:opacity-100">✕</button>
           </span>
         )}
-        {game && (
+        {(minPrice || maxPrice) && (
           <span className="flex items-center gap-1 label-upper text-[10px] px-2.5 py-1.5 bg-[var(--muted)] border border-[var(--border)] text-[var(--foreground)]">
-            {GAMES.find((g) => g.value === game)?.label}
-            <button onClick={() => setGame("")} className="ml-0.5 opacity-50 hover:opacity-100">✕</button>
+            {minPrice && maxPrice ? `$${minPrice}–$${maxPrice}` : minPrice ? `≥$${minPrice}` : `≤$${maxPrice}`}
+            <button onClick={() => { setMinPrice(""); setMaxPrice(""); }} className="ml-0.5 opacity-50 hover:opacity-100">✕</button>
           </span>
         )}
         {showSoldOut && (
@@ -1071,24 +1270,32 @@ export default function MarketplacePage() {
         )}
       </div>
 
-      {/* Card / product search */}
-      <div className="flex mb-8 max-w-sm">
-        <input
-          value={card}
-          onChange={(e) => setCard(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") setSearch(card); }}
-          placeholder="Search card or product name…"
-          className="flex-1 border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--border-strong)] outline-none"
-        />
-        <button
-          onClick={() => setSearch(card)}
-          className="label-upper px-4 py-2 border border-l-0 border-[var(--border)] bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)] transition-colors text-[10px]"
-        >
-          Search
-        </button>
+      {/* ── Search bar + result count ── */}
+      <div className="flex items-center gap-4 mb-8 flex-wrap">
+        <div className="flex flex-1 max-w-sm">
+          <input
+            value={card}
+            onChange={(e) => setCard(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") setSearch(card); }}
+            placeholder="Search card or product name…"
+            className="flex-1 border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--border-strong)] outline-none"
+          />
+          <button
+            onClick={() => setSearch(card)}
+            className="label-upper px-4 py-2 border border-l-0 border-[var(--border)] bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)] transition-colors text-[10px]"
+          >
+            Search
+          </button>
+        </div>
+        {!loading && (
+          <span className="label-upper text-[11px] text-[var(--text-muted)]">
+            {totalCount} listing{totalCount !== 1 ? "s" : ""}
+            {(conditionFilter || minPrice || maxPrice || game || search) ? " · filtered" : ""}
+          </span>
+        )}
       </div>
 
-      {/* Listing grid */}
+      {/* ── Listing grid / list ── */}
       {loading ? (
         <div className="flex justify-center py-20">
           <span className="w-6 h-6 border-2 border-[var(--border)] border-t-[var(--foreground)] rounded-full animate-spin" />
@@ -1141,9 +1348,25 @@ export default function MarketplacePage() {
                   </span>
                 </div>
               )}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {filteredListings.map((l) => <ListingCard key={l.id} listing={l} />)}
-              </div>
+              {viewMode === "grid" ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {filteredListings.map((l) => <ListingCard key={l.id} listing={l} view="grid" />)}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {/* List header */}
+                  <div className="hidden md:flex items-center gap-4 px-4 py-2 label-upper text-[10px] text-[var(--text-muted)] border-b border-[var(--border)]">
+                    <div className="w-10 shrink-0" />
+                    <div className="flex-1">Card</div>
+                    <div className="w-12 text-center">Cond.</div>
+                    <div className="w-8 text-right">Qty</div>
+                    <div className="hidden sm:block w-28 text-right">Seller</div>
+                    <div className="hidden md:block w-16 text-right">Listed</div>
+                    <div className="w-20 text-right">Price</div>
+                  </div>
+                  {filteredListings.map((l) => <ListingCard key={l.id} listing={l} view="list" />)}
+                </div>
+              )}
               {localOnly && (
                 <p className="mt-4 text-[11px] text-[var(--text-muted)]">
                   🛡️ Meeting a stranger? Read our{" "}
