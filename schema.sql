@@ -257,3 +257,29 @@ CREATE INDEX IF NOT EXISTS idx_news_published  ON news_items (published_at DESC)
 -- Migration helpers for existing databases
 ALTER TABLE seller_feedback ADD COLUMN IF NOT EXISTS rating TEXT;
 ALTER TABLE seller_feedback ADD COLUMN IF NOT EXISTS note   TEXT;
+
+-- ---------------------------------------------------------------------------
+-- Problem 8a: Completed sale transactions
+-- Written when a listing is marked as sold. Powers price discovery widgets,
+-- market dashboards, and eventually the bid/ask order book.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS transactions (
+  id            TEXT        PRIMARY KEY,
+  listing_id    TEXT        REFERENCES listings(id) ON DELETE SET NULL,
+  card_name     TEXT        NOT NULL,
+  set_name      TEXT        NOT NULL DEFAULT '',
+  game          TEXT        NOT NULL,
+  condition     TEXT        NOT NULL DEFAULT 'NM',
+  price_cents   INTEGER     NOT NULL,
+  quantity      INTEGER     NOT NULL DEFAULT 1,
+  buyer_id      TEXT        REFERENCES users(id) ON DELETE SET NULL,
+  seller_id     TEXT        REFERENCES users(id) ON DELETE SET NULL,
+  seller_region TEXT,
+  completed_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_card     ON transactions (lower(game), lower(card_name), completed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_game     ON transactions (game, completed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_seller   ON transactions (seller_id, completed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_recent   ON transactions (completed_at DESC);

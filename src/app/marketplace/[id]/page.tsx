@@ -292,6 +292,13 @@ export default function ListingDetailPage() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackDone, setFeedbackDone] = useState(false);
   const [feedbackSummary, setFeedbackSummary] = useState<{ positive: number; neutral: number; negative: number; total: number } | null>(null);
+  const [txStats, setTxStats] = useState<{
+    lastSoldCents: number | null;
+    lastSoldAt: string | null;
+    volume24h: number;
+    volume7d: number;
+    change7dPct: number | null;
+  } | null>(null);
 
   // Fetch listing
   useEffect(() => {
@@ -321,6 +328,15 @@ export default function ListingDetailPage() {
       if (user) setUserId(user.id ?? user.userId ?? null);
     });
   }, []);
+
+  // Fetch price discovery stats once listing is loaded
+  useEffect(() => {
+    if (!listing) return;
+    fetch(`/api/transactions?cardName=${encodeURIComponent(listing.cardName)}&game=${encodeURIComponent(listing.game)}`)
+      .then(r => r.json())
+      .then(setTxStats)
+      .catch(() => {});
+  }, [listing?.cardName, listing?.game]);
 
   async function handleMarkSold() {
     if (!confirm("Mark this listing as sold?")) return;
@@ -449,6 +465,27 @@ export default function ListingDetailPage() {
               <p className="text-4xl font-black text-[var(--foreground)]" style={{ fontFamily: "var(--font-serif, serif)" }}>
                 {formatPrice(listing.priceCents)}
               </p>
+
+              {/* Price discovery bar */}
+              {txStats?.lastSoldCents != null && (
+                <div className="flex flex-wrap gap-x-4 gap-y-1 items-center py-2 border-y border-[var(--border)]">
+                  <span className="label-upper text-[9px] text-[var(--text-muted)] uppercase tracking-widest">Market</span>
+                  <span className="label-upper text-[10px] text-[var(--foreground)]">
+                    Last sold: <strong>{formatPrice(txStats.lastSoldCents)}</strong>
+                  </span>
+                  <span className="label-upper text-[10px] text-[var(--text-muted)]">
+                    24h vol: {txStats.volume24h}
+                  </span>
+                  <span className="label-upper text-[10px] text-[var(--text-muted)]">
+                    7d vol: {txStats.volume7d}
+                  </span>
+                  {txStats.change7dPct != null && (
+                    <span className={`label-upper text-[10px] font-bold ${txStats.change7dPct >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                      7d: {txStats.change7dPct > 0 ? "+" : ""}{txStats.change7dPct}%
+                    </span>
+                  )}
+                </div>
+              )}
 
               <p className="label-upper text-[10px] text-[var(--text-muted)]">
                 Qty: {listing.quantity} &nbsp;·&nbsp; Game: {listing.game}

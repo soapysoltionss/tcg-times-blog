@@ -126,13 +126,15 @@ Problems in the TCG buying/selling space this site solves, with a step-by-step b
 
 **Our solution:** A stock market-style card exchange layer. Buyers place bids, sellers place asks — the spread determines market price. Transaction volume, market cap, and price history surfaced per card.
 
+### Done
+- [x] **8a.** `transactions` table — records every completed sale (`cardName`, `game`, `setName`, `priceCents`, `quantity`, `buyerId`, `sellerId`, `completedAt`, `region`). Auto-inserted when seller marks listing sold.
+- [x] **8e.** Price discovery widget on listing detail pages — "Last sold · 24h vol · 7d vol · 7d change %" pulled live from `/api/transactions`.
+- [x] **8f.** Sales Dashboard at `/tools/market/dashboard` — top movers, most traded, recent sales feed, per-game GMV breakdown with game filter.
+
 ### Still to do
-- [ ] **8a.** `transactions` table — record every completed sale: `cardName`, `game`, `setName`, `priceCents`, `quantity`, `buyerId`, `sellerId`, `completedAt`, `region`
 - [ ] **8b.** Bid/ask order book — `orders` table with `type` (bid/ask), `priceCents`, `quantity`, `status` (open/filled/cancelled), `expiresAt`, `userId`, `cardName`, `game`
 - [ ] **8c.** `/tools/market/[game]/[cardName]` — live order book view, price history chart, volume bars, market cap estimate
 - [ ] **8d.** Market cap calculation — last sale price × estimated circulating supply
-- [ ] **8e.** Price discovery widget on listing detail pages — "Last sold: $X · 24h volume: N copies · 7d change: +/−X%"
-- [ ] **8f.** Aggregate volume dashboard — top movers, most traded cards, sealed product index, game-by-game activity heatmap
 
 ---
 
@@ -361,9 +363,10 @@ Problems in the TCG buying/selling space this site solves, with a step-by-step b
 
 ### Steps
 
-- [ ] **8a** — Add `transactions` table — records every completed sale: `cardName`, `game`, `setName`, `priceCents`, `quantity`, `buyerId`, `sellerId`, `completedAt`, `region`
-- [ ] **8b** — Add bid/ask order book — `orders` table with `type` (bid/ask), `priceCents`, `quantity`, `status` (open/filled/cancelled), `expiresAt`, `userId`, `cardName`, `game`
+- [x] **8a** — `transactions` table — records every completed sale; auto-inserted when seller marks listing sold via `PATCH /api/marketplace/[id]`
+- [ ] **8b** — Bid/ask order book — `orders` table with `type` (bid/ask), `priceCents`, `quantity`, `status` (open/filled/cancelled), `expiresAt`, `userId`, `cardName`, `game`
 - [ ] **8c** — `/tools/market/[game]/[cardName]` page — live order book view, price history chart, volume bars (daily/weekly/monthly), market cap estimate
 - [ ] **8d** — Market cap calculation — last sale price × estimated circulating supply (derived from print run data and regional sales velocity)
-- [ ] **8e** — Price discovery widget — embed on listing detail pages: "Last sold: $X.XX · 24h volume: N copies · 7d change: +/−X%"
-- [ ] **8f** — Aggregate volume dashboard — `/tools/market` landing page showing top movers, most traded cards, sealed product index, game-by-game activity heatmap
+- [x] **8e** — Price discovery widget — embedded on listing detail pages: "Last sold · 24h vol · 7d vol · 7d change %" fetched live from `/api/transactions`
+- [x] **8f** — Sales Dashboard at `/tools/market/dashboard` — top movers, most traded, recent sales feed, per-game GMV breakdown with game filter
+

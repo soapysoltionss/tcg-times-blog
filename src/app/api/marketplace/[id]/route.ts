@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getListingById, deleteListing, markListingSold } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { neon } from "@neondatabase/serverless";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -45,5 +46,30 @@ export async function PATCH(_req: NextRequest, { params }: Props) {
   }
 
   await markListingSold(id, session.userId);
+
+  // Record completed transaction for price discovery (Problem 8a)
+  try {
+    const dbUrl = process.env.DATABASE_URL;
+    if (dbUrl) {
+      const sql = neon(dbUrl);
+      const txId = `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      await sql`
+        INSERT INTO transactions
+          (id, listing_id, card_name, set_name, game, condition, price_cents, quantity, seller_id, seller_region, completed_at)
+        VALUES
+          (${txId}, ${id},
+           ${listing.cardName}, ${listing.setName ?? ""},
+           ${listing.game},     ${listing.condition},
+           ${listing.priceCents}, ${listing.quantity ?? 1},
+           ${listing.sellerId}, ${listing.sellerRegion ?? null},
+           now())
+        ON CONFLICT DO NOTHING
+      `;
+    }
+  } catch (e) {
+    // Non-fatal — marking sold succeeds even if transaction insert fails
+    console.warn("[marketplace PATCH] transaction insert failed:", e);
+  }
+
   return NextResponse.json({ ok: true });
 }

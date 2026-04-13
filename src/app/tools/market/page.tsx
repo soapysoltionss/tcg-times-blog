@@ -891,6 +891,13 @@ export default function MarketPage() {
               >
                 Box EV →
               </Link>
+              <Link
+                href="/tools/market/dashboard"
+                className="flex items-center px-4 label-upper text-[9px] shrink-0 transition-opacity hover:opacity-60"
+                style={{ color: "var(--foreground)", borderRight: "1px solid var(--border)" }}
+              >
+                Sales Dashboard →
+              </Link>
             </>
           )}
         </div>
@@ -960,6 +967,9 @@ export default function MarketPage() {
         </Link>
         <Link href="/tools/market/box-ev" className="label-upper text-[10px] transition-opacity hover:opacity-60" style={{ color: "var(--text-muted)" }}>
           Box EV →
+        </Link>
+        <Link href="/tools/market/dashboard" className="label-upper text-[10px] transition-opacity hover:opacity-60" style={{ color: "var(--text-muted)" }}>
+          Sales Dashboard →
         </Link>
       </div>
     </div>
