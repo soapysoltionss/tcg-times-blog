@@ -484,6 +484,12 @@ export default function ListingDetailPage() {
                       7d: {txStats.change7dPct > 0 ? "+" : ""}{txStats.change7dPct}%
                     </span>
                   )}
+                  <Link
+                    href={`/tools/market/card/${encodeURIComponent(listing.game)}/${encodeURIComponent(listing.cardName.toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,""))}`}
+                    className="label-upper text-[9px] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors ml-auto"
+                  >
+                    Order Book →
+                  </Link>
                 </div>
               )}
 

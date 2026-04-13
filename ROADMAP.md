@@ -121,20 +121,18 @@ Problems in the TCG buying/selling space this site solves, with a step-by-step b
 
 ---
 
-## Problem 8 — No real-time price discovery or market liquidity 🔄 In progress
+## Problem 8 — No real-time price discovery or market liquidity ✅ Done
 **The issue:** Card prices in Singapore are opaque — sellers guess based on TCGPlayer (USD, US-focused) or Discord DMs. There is no SEA-specific live market, no transaction history, no volume data.
 
 **Our solution:** A stock market-style card exchange layer. Buyers place bids, sellers place asks — the spread determines market price. Transaction volume, market cap, and price history surfaced per card.
 
 ### Done
-- [x] **8a.** `transactions` table — records every completed sale (`cardName`, `game`, `setName`, `priceCents`, `quantity`, `buyerId`, `sellerId`, `completedAt`, `region`). Auto-inserted when seller marks listing sold.
-- [x] **8e.** Price discovery widget on listing detail pages — "Last sold · 24h vol · 7d vol · 7d change %" pulled live from `/api/transactions`.
-- [x] **8f.** Sales Dashboard at `/tools/market/dashboard` — top movers, most traded, recent sales feed, per-game GMV breakdown with game filter.
-
-### Still to do
-- [ ] **8b.** Bid/ask order book — `orders` table with `type` (bid/ask), `priceCents`, `quantity`, `status` (open/filled/cancelled), `expiresAt`, `userId`, `cardName`, `game`
-- [ ] **8c.** `/tools/market/[game]/[cardName]` — live order book view, price history chart, volume bars, market cap estimate
-- [ ] **8d.** Market cap calculation — last sale price × estimated circulating supply
+- [x] **8a.** `transactions` table — records every completed sale. Auto-inserted when seller marks listing sold via `PATCH /api/marketplace/[id]`.
+- [x] **8b.** Bid/ask order book — `orders` table (`type`, `priceCents`, `quantity`, `status`, `expiresAt`, `region`, `note`). `/api/orders` GET/POST + `/api/orders/[id]` PATCH to cancel. Auto-matches crossing orders and inserts transaction records on fill.
+- [x] **8c.** `/tools/market/card/[game]/[cardSlug]` — live order book view (bids/asks), volume bar chart, sparkline, recent sales feed, market cap panel, place-order form, my open orders panel.
+- [x] **8d.** Market cap calculation — `supply_estimates` table + `/api/market-cap` route — last sale price × global/regional supply. Shown on per-card market page.
+- [x] **8e.** Price discovery widget on listing detail pages — "Last sold · 24h vol · 7d vol · 7d change%" + "Order Book →" deep link.
+- [x] **8f.** Sales Dashboard at `/tools/market/dashboard` — top movers (clickable → card page), most traded, recent sales feed, per-game GMV breakdown with game filter.
 
 ---
 
@@ -364,9 +362,9 @@ Problems in the TCG buying/selling space this site solves, with a step-by-step b
 ### Steps
 
 - [x] **8a** — `transactions` table — records every completed sale; auto-inserted when seller marks listing sold via `PATCH /api/marketplace/[id]`
-- [ ] **8b** — Bid/ask order book — `orders` table with `type` (bid/ask), `priceCents`, `quantity`, `status` (open/filled/cancelled), `expiresAt`, `userId`, `cardName`, `game`
-- [ ] **8c** — `/tools/market/[game]/[cardName]` page — live order book view, price history chart, volume bars (daily/weekly/monthly), market cap estimate
-- [ ] **8d** — Market cap calculation — last sale price × estimated circulating supply (derived from print run data and regional sales velocity)
-- [x] **8e** — Price discovery widget — embedded on listing detail pages: "Last sold · 24h vol · 7d vol · 7d change %" fetched live from `/api/transactions`
-- [x] **8f** — Sales Dashboard at `/tools/market/dashboard` — top movers, most traded, recent sales feed, per-game GMV breakdown with game filter
+- [x] **8b** — Bid/ask order book — `orders` table + `/api/orders` (GET/POST) + `/api/orders/[id]` (PATCH cancel). Greedy matcher auto-fills crossing orders and records transactions.
+- [x] **8c** — `/tools/market/card/[game]/[cardSlug]` — live order book, volume bars, sparkline, recent sales, market cap, place-order form, cancel own orders
+- [x] **8d** — Market cap calculation — `supply_estimates` table + `/api/market-cap` — last sale × global/regional supply estimate
+- [x] **8e** — Price discovery widget — embedded on listing detail pages: "Last sold · 24h vol · 7d vol · 7d change %" + "Order Book →" link
+- [x] **8f** — Sales Dashboard at `/tools/market/dashboard` — top movers (clickable), most traded, recent feed, per-game GMV breakdown
 

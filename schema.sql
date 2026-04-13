@@ -283,3 +283,57 @@ CREATE INDEX IF NOT EXISTS idx_transactions_card     ON transactions (lower(game
 CREATE INDEX IF NOT EXISTS idx_transactions_game     ON transactions (game, completed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_transactions_seller   ON transactions (seller_id, completed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_transactions_recent   ON transactions (completed_at DESC);
+
+-- ---------------------------------------------------------------------------
+-- Problem 8b: Bid / Ask order book
+-- Users place bids (want to buy at $X) or asks (want to sell at $Y).
+-- When a bid price >= an open ask for the same card, both fill automatically.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS orders (
+  id            TEXT        PRIMARY KEY,
+  user_id       TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  card_name     TEXT        NOT NULL,
+  set_name      TEXT        NOT NULL DEFAULT '',
+  game          TEXT        NOT NULL,
+  condition     TEXT        NOT NULL DEFAULT 'Near Mint',
+  type          TEXT        NOT NULL CHECK (type IN ('bid','ask')),
+  price_cents   INTEGER     NOT NULL CHECK (price_cents > 0),
+  quantity      INTEGER     NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  quantity_filled INTEGER   NOT NULL DEFAULT 0,
+  status        TEXT        NOT NULL DEFAULT 'open' CHECK (status IN ('open','filled','cancelled','expired')),
+  note          TEXT,
+  region        TEXT,
+  expires_at    TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_orders_card      ON orders (lower(game), lower(card_name), status, type, price_cents);
+CREATE INDEX IF NOT EXISTS idx_orders_user      ON orders (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_open_bid  ON orders (lower(game), lower(card_name), price_cents DESC) WHERE status = 'open' AND type = 'bid';
+CREATE INDEX IF NOT EXISTS idx_orders_open_ask  ON orders (lower(game), lower(card_name), price_cents ASC)  WHERE status = 'open' AND type = 'ask';
+CREATE INDEX IF NOT EXISTS idx_orders_status    ON orders (status, expires_at) WHERE status = 'open';
+
+-- ---------------------------------------------------------------------------
+-- Problem 8d: Circulating supply estimates (for market cap calculation)
+-- Populated manually or by admin script. One row per card+game combo.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS supply_estimates (
+  id            SERIAL      PRIMARY KEY,
+  card_name     TEXT        NOT NULL,
+  game          TEXT        NOT NULL,
+  set_name      TEXT        NOT NULL DEFAULT '',
+  rarity        TEXT,
+  -- estimated number of copies in active circulation globally
+  supply_global INTEGER,
+  -- estimated copies in SEA/SG region specifically
+  supply_region INTEGER,
+  notes         TEXT,
+  source        TEXT,                      -- e.g. "print_run_data", "manual", "tcgcsv"
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (lower(card_name), lower(game))
+);
+
+CREATE INDEX IF NOT EXISTS idx_supply_card ON supply_estimates (lower(game), lower(card_name));

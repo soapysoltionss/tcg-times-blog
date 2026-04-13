@@ -80,6 +80,11 @@ const GAME_LABELS: Record<string, string> = {
 
 const GAMES = ["", "pokemon", "flesh-and-blood", "one-piece", "dragon-ball"];
 
+function cardMarketHref(game: string, cardName: string) {
+  const slug = cardName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  return `/tools/market/card/${encodeURIComponent(game)}/${encodeURIComponent(slug)}`;
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -173,7 +178,7 @@ export default function MarketDashboardPage() {
                     {data.topMovers.map((m, i) => (
                       <div key={i} className="flex items-center justify-between py-2.5 gap-4">
                         <div className="flex flex-col gap-0.5 min-w-0">
-                          <span className="font-semibold text-sm text-[var(--foreground)] truncate">{m.cardName}</span>
+                          <Link href={cardMarketHref(m.game, m.cardName)} className="font-semibold text-sm text-[var(--foreground)] truncate hover:underline">{m.cardName}</Link>
                           <span className="label-upper text-[9px] text-[var(--text-muted)]">{GAME_LABELS[m.game] ?? m.game} · vol {m.volume7d}</span>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
@@ -204,7 +209,7 @@ export default function MarketDashboardPage() {
                     {data.mostTraded.map((m, i) => (
                       <div key={i} className="flex items-center justify-between py-2.5 gap-4">
                         <div className="flex flex-col gap-0.5 min-w-0">
-                          <span className="font-semibold text-sm text-[var(--foreground)] truncate">{m.cardName}</span>
+                          <Link href={cardMarketHref(m.game, m.cardName)} className="font-semibold text-sm text-[var(--foreground)] truncate hover:underline">{m.cardName}</Link>
                           <span className="label-upper text-[9px] text-[var(--text-muted)]">{GAME_LABELS[m.game] ?? m.game} · last sale {timeAgo(m.lastSaleAt)}</span>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
