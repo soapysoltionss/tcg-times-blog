@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifySession } from "@/lib/session";
+import { getUserById } from "@/lib/db";
 
 // Paths that are always public — the lock page itself and its API only.
 // Everything else (including /login and /register) requires the site password.
@@ -10,13 +12,33 @@ const PUBLIC_PATHS = [
   "/api/auth/patreon-webhook",  // Patreon server-to-server webhook
 ];
 
-export function proxy(req: NextRequest) {
+// Hidden path for the learning-quant SPA — only accessible by role=admin users.
+const QUANT_PATH = "/quant-lab-c4612f66b3d3a152268cb78678169119";
+
+export async function proxy(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // ── Quant-lab gate: admin only, hard 404 for everyone else ──────────────
+  if (pathname.startsWith(QUANT_PATH)) {
+    const token = req.cookies.get("tcgt_session")?.value;
+    if (token) {
+      const session = await verifySession(token);
+      if (session?.userId) {
+        const user = await getUserById(session.userId);
+        if (user?.role === "admin") {
+          return NextResponse.next();
+        }
+      }
+    }
+    // Not admin → hard 404 (no redirect, keeps the path secret)
+    return new NextResponse(null, { status: 404 });
+  }
+
+  // ── Site-lock gate ───────────────────────────────────────────────────────
   // If the site isn't locked, do nothing
   if (process.env.SITE_LOCKED !== "true") {
     return NextResponse.next();
   }
-
-  const { pathname } = req.nextUrl;
 
   // Always allow the lock page and unlock API through
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
