@@ -44,3 +44,7 @@ DOCS.md
 MARKDOWN.md
 next-env.d.ts
 *.har
+
+# learning-quant — private tool, never push source or build
+/learning-quant/
+/public/quant-lab-*/
