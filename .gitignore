@@ -46,6 +46,14 @@ next-env.d.ts
 *.har
 
 # learning-quant — private tool, never push source or node_modules
-/learning-quant/
+/learning-quant/src/
+/learning-quant/node_modules/
+/learning-quant/dist/
+/learning-quant/public/
+/learning-quant/*.json
+/learning-quant/*.ts
+/learning-quant/*.html
+/learning-quant/*.js
+/learning-quant/scripts/
 # Allow the compiled output so Vercel serves it (middleware blocks non-admins)
 !/public/quant-lab-c4612f66b3d3a152268cb78678169119/

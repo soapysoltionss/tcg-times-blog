@@ -1,0 +1,13 @@
+{
+  "folders": [
+    {
+      "name": "TCG Times Blog",
+      "path": "."
+    },
+    {
+      "name": "Learning Quant",
+      "path": "./learning-quant"
+    }
+  ],
+  "settings": {}
+}
