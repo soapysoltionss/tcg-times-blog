@@ -15,7 +15,7 @@ const PUBLIC_PATHS = [
 // Hidden path for the learning-quant SPA — only accessible by role=admin users.
 const QUANT_PATH = "/quant-lab-c4612f66b3d3a152268cb78678169119";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // ── Quant-lab gate: admin only, hard 404 for everyone else ──────────────
