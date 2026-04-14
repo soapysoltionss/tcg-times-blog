@@ -20,6 +20,15 @@ export async function proxy(req: NextRequest) {
 
   // ── Quant-lab gate: admin only, hard 404 for everyone else ──────────────
   if (pathname.startsWith(QUANT_PATH)) {
+    // Static assets (JS, CSS, fonts, images) are served freely — they are
+    // meaningless without the HTML entry point, and blocking them breaks the
+    // page for the admin user too (no CSS/JS loads when there's no cookie yet
+    // on the asset sub-requests).
+    const isAsset = /\.(js|css|woff2?|ttf|otf|svg|png|ico|json|map)(\?.*)?$/.test(pathname);
+    if (isAsset) {
+      return NextResponse.next();
+    }
+
     const token = req.cookies.get("tcgt_session")?.value;
     if (token) {
       const session = await verifySession(token);
