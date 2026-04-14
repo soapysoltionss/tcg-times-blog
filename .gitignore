@@ -45,6 +45,7 @@ MARKDOWN.md
 next-env.d.ts
 *.har
 
-# learning-quant — private tool, never push source or build
+# learning-quant — private tool, never push source or node_modules
 /learning-quant/
-/public/quant-lab-*/
+# Allow the compiled output so Vercel serves it (middleware blocks non-admins)
+!/public/quant-lab-c4612f66b3d3a152268cb78678169119/

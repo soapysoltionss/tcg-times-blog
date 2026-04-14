@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run build:quant && next build",
-    "build:quant": "cd learning-quant && npm install --prefer-offline && npm run build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
