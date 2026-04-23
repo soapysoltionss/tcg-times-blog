@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback, useMemo } from "react";
+import { useCurrency } from "@/lib/currency";
 
 export interface PricePoint {
   date: string;       // "YYYY-MM-DD"
@@ -24,10 +25,6 @@ const RANGES: { label: Range; days: number | null }[] = [
   { label: "1Y",  days: 365 },
   { label: "ALL", days: null },
 ];
-
-function formatPrice(cents: number) {
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 function formatDateShort(date: string) {
   const [, m, d] = date.split("-");
@@ -55,6 +52,7 @@ export function PriceGraph({ cardName, data, showDrawdown = false }: Props) {
   // ── ALL hooks unconditionally (Rules of Hooks) ────────────────────────────
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const { formatPrice } = useCurrency();
 
   const sorted = useMemo(
     () => [...data].sort((a, b) => a.date.localeCompare(b.date)),

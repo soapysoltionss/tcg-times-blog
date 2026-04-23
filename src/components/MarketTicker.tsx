@@ -15,6 +15,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import type { TickerEvent } from "@/app/api/ticker/route";
+import { useCurrency } from "@/lib/currency";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -60,6 +61,7 @@ function ChangePill({ pct }: { pct: number }) {
 }
 
 function TickerItem({ event }: { event: TickerEvent }) {
+  const { formatPrice } = useCurrency();
   const inner = (
     <span className="flex items-center gap-1.5 whitespace-nowrap px-5 border-r border-white/10 h-full">
       <KindBadge kind={event.kind} />
@@ -83,7 +85,7 @@ function TickerItem({ event }: { event: TickerEvent }) {
         <>
           <span className="text-white/40 text-[10px] mx-0.5">·</span>
           <span className="text-[11px] font-bold tabular-nums text-white/80">
-            {fmtPrice(event.priceCents)}
+            {formatPrice(event.priceCents)}
           </span>
           {event.changePct !== undefined && event.changePct !== 0 && (
             <ChangePill pct={event.changePct} />
@@ -95,7 +97,7 @@ function TickerItem({ event }: { event: TickerEvent }) {
         <>
           <span className="text-white/40 text-[10px] mx-0.5">·</span>
           <span className="text-[11px] tabular-nums text-blue-200/80">
-            {fmtPrice(event.priceCents)}
+            {formatPrice(event.priceCents)}
           </span>
         </>
       )}
@@ -104,7 +106,7 @@ function TickerItem({ event }: { event: TickerEvent }) {
         <>
           <span className="text-white/40 text-[10px] mx-0.5">·</span>
           <span className="text-[11px] tabular-nums text-emerald-200/80 line-through decoration-emerald-400/60">
-            {fmtPrice(event.priceCents)}
+            {formatPrice(event.priceCents)}
           </span>
         </>
       )}
@@ -132,6 +134,7 @@ export default function MarketTicker() {
   const [events, setEvents] = useState<TickerEvent[]>([]);
   const [paused, setPaused] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     let mounted = true;

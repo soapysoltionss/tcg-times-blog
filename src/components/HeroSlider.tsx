@@ -11,6 +11,7 @@ import gsap from "gsap";
 // @ts-ignore — gsap/Observer casing is correct at runtime; TS false-positive on macOS
 import { Observer } from "gsap/Observer";
 import type { PostMeta, ForumPost } from "@/types/post";
+import { useCurrency } from "@/lib/currency";
 
 gsap.registerPlugin(Observer);
 
@@ -127,7 +128,7 @@ function ArticleSlide({ post }: { post: PostMeta }) {
 }
 
 function MarketSlide({ report }: { report: MarketReportSnap }) {
-  const priceDollars = (report.topCardPriceCents / 100).toFixed(2);
+  const { formatPrice } = useCurrency();
   const hook = pickHook(MARKET_HOOKS, report.topCardName);
   return (
     <div className="relative h-full overflow-hidden">
@@ -157,7 +158,7 @@ function MarketSlide({ report }: { report: MarketReportSnap }) {
           {hook}
         </p>
         <div className="flex flex-wrap items-center gap-3 mb-2">
-          <span className="text-2xl font-bold text-white">${priceDollars}</span>
+          <span className="text-2xl font-bold text-white">{formatPrice(report.topCardPriceCents)}</span>
           <span className="label-upper text-xs text-white/60 border border-white/30 px-2 py-0.5">Highest listed</span>
         </div>
         <p className="text-white/60 text-sm max-w-lg mb-6">

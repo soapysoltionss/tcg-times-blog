@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import ThemeProvider from "@/components/ThemeProvider";
 import MarketTicker from "@/components/MarketTicker";
 import { siteConfig } from "@/config/site";
+import { CurrencyProvider } from "@/lib/currency";
 
 const playfair = Playfair_Display({
   variable: "--font-serif",
@@ -54,10 +55,12 @@ export default function RootLayout({
         className={`${playfair.variable} ${dmSans.variable} antialiased min-h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)]`}
       >
         <ThemeProvider>
+          <CurrencyProvider>
             <Header />
             <MarketTicker />
             <main className="flex-1">{children}</main>
             <Footer />
+          </CurrencyProvider>
           </ThemeProvider>
       </body>
     </html>

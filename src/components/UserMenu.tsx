@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { xpToLevel } from "@/lib/xp";
+import { useCurrency, CURRENCIES } from "@/lib/currency";
 
 type SessionUser = {
   username: string;
@@ -15,7 +16,9 @@ type SessionUser = {
 export default function UserMenu() {
   const [user, setUser] = useState<SessionUser | null | "loading">("loading");
   const [open, setOpen] = useState(false);
+  const [currencyOpen, setCurrencyOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { currency, setCurrencyCode } = useCurrency();
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -109,6 +112,49 @@ export default function UserMenu() {
                 </div>
               );
             })()}
+          </div>
+
+          {/* Currency selector */}
+          <div className="px-4 py-2 border-b border-[var(--border)]">
+            <p className="label-upper text-[var(--text-muted)] text-[9px] mb-1.5">Currency</p>
+            <div className="relative">
+              <button
+                onClick={() => setCurrencyOpen((o) => !o)}
+                className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-sm border border-[var(--border)] bg-[var(--muted)] hover:bg-[var(--background)] transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <span>{currency.flag}</span>
+                  <span className="font-medium text-[var(--foreground)]">{currency.code}</span>
+                  <span className="text-[var(--text-muted)] text-xs">{currency.symbol}</span>
+                </span>
+                <span className="text-[var(--text-muted)] text-[10px]">▾</span>
+              </button>
+
+              {currencyOpen && (
+                <div className="absolute left-0 top-full mt-1 w-full z-50 border border-[var(--border)] bg-[var(--background)] shadow-lg max-h-48 overflow-y-auto">
+                  {CURRENCIES.map((c) => (
+                    <button
+                      key={c.code}
+                      onClick={() => {
+                        setCurrencyCode(c.code);
+                        setCurrencyOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[var(--muted)] ${
+                        c.code === currency.code
+                          ? "bg-[var(--foreground)] text-[var(--background)]"
+                          : "text-[var(--foreground)]"
+                      }`}
+                    >
+                      <span>{c.flag}</span>
+                      <span className="font-medium">{c.code}</span>
+                      <span className={`text-xs ml-auto ${c.code === currency.code ? "text-[var(--background)]" : "text-[var(--text-muted)]"}`}>
+                        {c.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Links */}

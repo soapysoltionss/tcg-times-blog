@@ -10,6 +10,7 @@ import FlipCard from "@/components/FlipCard";
 import type { FabCardPrinting } from "@/app/api/fab-cards/route";
 import type { JeuxProduct } from "@/lib/jeux";
 import { getReprintRisk, REPRINT_RISK_STYLE, REPRINT_RISK_LABEL } from "@/lib/reprint-risk";
+import { useCurrency } from "@/lib/currency";
 
 // ---------------------------------------------------------------------------
 // SetNameCombobox
@@ -149,10 +150,6 @@ const CONDITIONS: ListingCondition[] = [
   "Damaged",
 ];
 
-function formatPrice(cents: number) {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
 function conditionBadge(c: ListingCondition) {
   const map: Record<ListingCondition, string> = {
     "Near Mint": "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
@@ -198,6 +195,7 @@ function timeAgo(iso: string): string {
 // ---------------------------------------------------------------------------
 
 function ListingCard({ listing, view = "grid" }: { listing: Listing; view?: "grid" | "list" }) {
+  const { formatPrice } = useCurrency();
   const reprintRisk = listing.listingType !== "sealed"
     ? getReprintRisk(listing.cardName)
     : null;
@@ -1005,6 +1003,7 @@ function SellModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
 // ---------------------------------------------------------------------------
 
 export default function MarketplacePage() {
+  const { formatPrice } = useCurrency();
   const [tab, setTab] = useState<"store" | "community">("store");
   const [storeSource, setStoreSource] = useState<StoreSource>("all");
   const [productType, setProductType] = useState<ProductTypeFilter>("");

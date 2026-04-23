@@ -5,6 +5,7 @@ import type { FabCardResult } from "@/app/api/fab-cards/route";
 import type { GaCardResult } from "@/app/api/ga-cards/route";
 import type { OpCardResult } from "@/app/api/op-cards/route";
 import type { PokemonCardResult } from "@/app/api/pokemon-cards/route";
+import { useCurrency } from "@/lib/currency";
 
 /** Normalised card shape shared by all game endpoints */
 export type AnyCardResult = FabCardResult | GaCardResult | OpCardResult | PokemonCardResult;
@@ -58,6 +59,7 @@ export default function CardAutocomplete({
   const [activeIdx, setActiveIdx] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { formatPrice } = useCurrency();
 
   const debouncedQuery = useDebounce(value, 300);
   const abortRef = useRef<AbortController | null>(null);
@@ -197,7 +199,7 @@ export default function CardAutocomplete({
                 {card.marketPriceCents !== null && (
                   <div className="flex items-center gap-1 shrink-0">
                     <span className="label-upper text-[10px] text-[var(--text-muted)]">
-                      ~${(card.marketPriceCents / 100).toFixed(2)}
+                      ~{formatPrice(card.marketPriceCents)}
                     </span>
                     {card.priceChangePct !== null && card.priceChangePct !== 0 && (
                       <span
